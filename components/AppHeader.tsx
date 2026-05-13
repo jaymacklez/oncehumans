@@ -37,52 +37,54 @@ export default function AppHeader() {
     router.push('/')
   }
 
+  const navLinkClass = 'text-xs uppercase tracking-[0.16em] text-black hover:text-gray-700 sm:text-[0.95rem] sm:tracking-[0.3em]'
+
   return (
-    <header className="flex items-center justify-between gap-4 px-8 py-6">
-      <div className="flex items-center gap-4">
+    <header className="flex flex-wrap items-start justify-between gap-4 px-4 py-4 sm:items-center sm:px-8 sm:py-6">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
         {showHomeLink && (
           <Link
             href="/"
-            className="text-[0.95rem] font-black uppercase tracking-[0.3em] text-black hover:text-gray-700"
+            className="text-xs font-black uppercase tracking-[0.16em] text-black hover:text-gray-700 sm:text-[0.95rem] sm:tracking-[0.3em]"
           >
             once humans
           </Link>
         )}
-        <SubmitPageModal />
+        {profilePath && <SubmitPageModal />}
       </div>
       {profilePath ? (
-        <nav className="flex items-center gap-16">
+        <nav className="flex flex-wrap items-center justify-end gap-x-5 gap-y-3 sm:gap-x-16">
           <Link
             href="/search"
-            className="text-[0.95rem] uppercase tracking-[0.3em] text-black hover:text-gray-700"
+            className={navLinkClass}
           >
             Search
           </Link>
           <Link
             href={profilePath}
-            className="text-[0.95rem] uppercase tracking-[0.3em] text-black hover:text-gray-700"
+            className={navLinkClass}
           >
             Profile
           </Link>
           <button
             type="button"
             onClick={handleLogout}
-            className="text-[0.95rem] uppercase tracking-[0.3em] text-black hover:text-gray-700"
+            className={navLinkClass}
           >
             Logout
           </button>
         </nav>
       ) : (
-        <nav className="flex items-center gap-16">
+        <nav className="flex flex-wrap items-center justify-end gap-x-5 gap-y-3 sm:gap-x-16">
           <Link
             href="/search"
-            className="text-[0.95rem] uppercase tracking-[0.3em] text-black hover:text-gray-700"
+            className={navLinkClass}
           >
             Search
           </Link>
           <Link
             href="/signup"
-            className="text-[0.95rem] uppercase tracking-[0.3em] text-black hover:text-gray-700"
+            className={navLinkClass}
           >
             Signup
           </Link>

@@ -31,14 +31,14 @@ function CompactPagePreview({ page, onSelectRelated }: CompactPagePreviewProps) 
   }
 
   return (
-    <article className="space-y-5 rounded-[2rem] border border-black/10 bg-white/95 p-6 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
-      <div className="rounded-[1.75rem] bg-slate-950 p-6 text-white">
+    <article className="space-y-4 rounded-[1.25rem] border border-black/10 bg-white/95 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:space-y-5 sm:rounded-[2rem] sm:p-6">
+      <div className="rounded-[1.25rem] bg-slate-950 p-4 text-white sm:rounded-[1.75rem] sm:p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-white/55">
+          <div className="min-w-0">
+            <p className="break-words text-[0.7rem] uppercase tracking-[0.16em] text-white/55 sm:text-xs sm:tracking-[0.3em]">
               {page.section} / {page.category} / {page.subcategory}
             </p>
-            <h2 className="mt-3 text-3xl font-black uppercase tracking-[0.18em] text-white">{page.title}</h2>
+            <h2 className="mt-3 break-words text-2xl font-black uppercase tracking-[0.08em] text-white sm:text-3xl sm:tracking-[0.18em]">{page.title}</h2>
           </div>
           <LiveChatDrawer
             key={`entry:${page.id}`}
@@ -56,8 +56,8 @@ function CompactPagePreview({ page, onSelectRelated }: CompactPagePreviewProps) 
       <GalleryMediaSection key={page.id} seedItems={page.gallery} compact />
 
       {relatedPages.length > 0 && (
-        <section className="rounded-[1.5rem] border border-black/10 bg-slate-50 p-5">
-          <h3 className="text-sm font-black uppercase tracking-[0.25em] text-black">Related</h3>
+        <section className="rounded-[1.25rem] border border-black/10 bg-slate-50 p-4 sm:rounded-[1.5rem] sm:p-5">
+          <h3 className="text-sm font-black uppercase tracking-[0.16em] text-black sm:tracking-[0.25em]">Related</h3>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             {relatedPages.map((relatedPage) => (
               <button
@@ -66,17 +66,17 @@ function CompactPagePreview({ page, onSelectRelated }: CompactPagePreviewProps) 
                 onClick={() => onSelectRelated(relatedPage)}
                 className="rounded-[1.1rem] bg-slate-950 p-4 text-left text-white transition hover:-translate-y-0.5 hover:bg-black"
               >
-                <p className="text-[0.65rem] uppercase tracking-[0.22em] text-white/50">{relatedPage.subcategory}</p>
-                <h4 className="mt-2 text-sm font-black uppercase tracking-[0.14em]">{relatedPage.title}</h4>
+                <p className="break-words text-[0.65rem] uppercase tracking-[0.14em] text-white/50 sm:tracking-[0.22em]">{relatedPage.subcategory}</p>
+                <h4 className="mt-2 break-words text-sm font-black uppercase tracking-[0.08em] sm:tracking-[0.14em]">{relatedPage.title}</h4>
               </button>
             ))}
           </div>
         </section>
       )}
 
-      <section className="rounded-[1.5rem] border border-black/10 bg-slate-50 p-5">
+      <section className="rounded-[1.25rem] border border-black/10 bg-slate-50 p-4 sm:rounded-[1.5rem] sm:p-5">
         <div className="flex items-center justify-between gap-4">
-          <h3 className="text-sm font-black uppercase tracking-[0.25em] text-black">Posts</h3>
+          <h3 className="text-sm font-black uppercase tracking-[0.16em] text-black sm:tracking-[0.25em]">Posts</h3>
           <button
             type="button"
             onClick={addPost}
@@ -175,7 +175,7 @@ export default function Home() {
           >
             <div className={`h-28 rounded-t-[1.6rem] bg-gradient-to-br ${category.accent} bg-cover bg-center`} />
             <div className="bg-slate-950 p-5">
-              <h3 className="text-xl font-black uppercase tracking-[0.18em] text-white">{category.title}</h3>
+              <h3 className="break-words text-lg font-black uppercase tracking-[0.12em] text-white sm:text-xl sm:tracking-[0.18em]">{category.title}</h3>
             </div>
           </button>
 
@@ -193,7 +193,7 @@ export default function Home() {
                       onClick={() => chooseSubcategory(subcategory.title)}
                       className={`w-full rounded-[1rem] border px-4 py-3 text-left transition hover:-translate-y-0.5 ${openSubcategory === subcategory.title ? 'border-black bg-black text-white' : 'border-black/10 bg-slate-50 text-black'}`}
                     >
-                      <h3 className="text-sm font-black uppercase tracking-[0.18em]">{subcategory.title}</h3>
+                      <h3 className="break-words text-sm font-black uppercase tracking-[0.1em] sm:tracking-[0.18em]">{subcategory.title}</h3>
                     </button>
 
                     {openSubcategory === subcategory.title && (
@@ -210,7 +210,7 @@ export default function Home() {
                               onClick={() => setSelectedPageId(page.id)}
                               className={`rounded-[1rem] border p-4 text-left transition hover:-translate-y-0.5 ${selectedPageId === page.id ? 'border-black bg-slate-950 text-white' : 'border-black/10 bg-white text-black'}`}
                             >
-                              <h3 className="text-base font-black uppercase tracking-[0.13em]">{page.title}</h3>
+                              <h3 className="break-words text-base font-black uppercase tracking-[0.08em] sm:tracking-[0.13em]">{page.title}</h3>
                             </button>
                           ))
                         )}
@@ -228,34 +228,34 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#f4ead4] text-black font-sans">
-      <main className="mx-auto flex min-h-screen max-w-7xl flex-col items-center px-6 py-16">
-        <div className="flex w-full max-w-4xl items-center justify-center gap-10">
+      <main className="mx-auto flex min-h-screen max-w-7xl flex-col items-center px-4 py-8 sm:px-6 sm:py-16">
+        <div className="flex w-full max-w-4xl flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center sm:gap-10">
           <button
             type="button"
             onClick={() => chooseSection('once')}
-            className="w-full rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-10 py-7 text-[4.5rem] font-black uppercase tracking-[0.35em] text-black transition duration-200 hover:bg-[#d2b18c] sm:text-[5rem]"
+            className="w-full rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-6 py-6 text-4xl font-black uppercase tracking-[0.08em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-10 sm:py-7 sm:text-5xl sm:tracking-[0.18em] lg:text-[5rem] lg:tracking-[0.35em]"
           >
             once
           </button>
           <button
             type="button"
             onClick={() => chooseSection('humans')}
-            className="w-full rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-10 py-7 text-[4.5rem] font-black uppercase tracking-[0.35em] text-black transition duration-200 hover:bg-[#d2b18c] sm:text-[5rem]"
+            className="w-full rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-6 py-6 text-4xl font-black uppercase tracking-[0.08em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-10 sm:py-7 sm:text-5xl sm:tracking-[0.18em] lg:text-[5rem] lg:tracking-[0.35em]"
           >
             humans
           </button>
         </div>
 
         {openSection && (
-          <section className="mt-16 w-full max-w-7xl space-y-8">
-            <div className="rounded-[2rem] border border-black/10 bg-white/90 p-8 shadow-[0_35px_80px_rgba(15,23,42,0.12)]">
+          <section className="mt-8 w-full max-w-7xl space-y-6 sm:mt-16 sm:space-y-8">
+            <div className="rounded-[1.5rem] border border-black/10 bg-white/90 p-5 shadow-[0_35px_80px_rgba(15,23,42,0.12)] sm:rounded-[2rem] sm:p-8">
               <div className="space-y-3">
-                <h2 className="text-5xl font-black uppercase tracking-[0.2em] text-black">{openSection}</h2>
-                <p className="text-base uppercase tracking-[0.35em] text-black/75">
+                <h2 className="break-words text-3xl font-black uppercase tracking-[0.1em] text-black sm:text-5xl sm:tracking-[0.2em]">{openSection}</h2>
+                <p className="text-sm uppercase tracking-[0.16em] text-black/75 sm:text-base sm:tracking-[0.35em]">
                   {openSection === 'once' ? 'during life' : 'in existence'}
                 </p>
                 {openCategory && (
-                  <p className="text-sm uppercase tracking-[0.25em] text-black/45">
+                  <p className="break-words text-xs uppercase tracking-[0.12em] text-black/45 sm:text-sm sm:tracking-[0.25em]">
                     {[openSection, openCategory, openSubcategory, selectedPage?.title].filter(Boolean).join(' / ')}
                   </p>
                 )}
@@ -269,11 +269,11 @@ export default function Home() {
                     key={category.title}
                     type="button"
                     onClick={() => chooseCategory(category)}
-                    className="group block min-w-[18rem] overflow-hidden rounded-[2rem] border border-black/10 bg-slate-950 text-left shadow-[0_25px_60px_rgba(15,23,42,0.18)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(15,23,42,0.22)]"
-                  >
-                    <div className={`h-48 rounded-t-[2rem] bg-gradient-to-br ${category.accent} bg-cover bg-center`} />
-                    <div className="bg-slate-950 p-6">
-                      <h3 className="text-2xl font-black uppercase tracking-[0.2em] text-white">{category.title}</h3>
+                  className="group block w-full overflow-hidden rounded-[1.5rem] border border-black/10 bg-slate-950 text-left shadow-[0_25px_60px_rgba(15,23,42,0.18)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(15,23,42,0.22)] sm:min-w-[18rem] sm:rounded-[2rem]"
+                >
+                    <div className={`h-36 rounded-t-[1.5rem] bg-gradient-to-br ${category.accent} bg-cover bg-center sm:h-48 sm:rounded-t-[2rem]`} />
+                    <div className="bg-slate-950 p-5 sm:p-6">
+                      <h3 className="break-words text-xl font-black uppercase tracking-[0.12em] text-white sm:text-2xl sm:tracking-[0.2em]">{category.title}</h3>
                     </div>
                   </button>
                 ))}

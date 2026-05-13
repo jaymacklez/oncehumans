@@ -208,7 +208,7 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
           setOpen(true)
         }}
         className={variant === 'global'
-          ? 'fixed bottom-4 right-4 z-40 rounded-full border border-black/10 bg-slate-950 px-5 py-4 text-xs font-black uppercase tracking-[0.2em] text-white shadow-[0_15px_40px_rgba(15,23,42,0.22)] transition hover:bg-black'
+          ? 'fixed bottom-3 right-3 z-40 rounded-full border border-black/10 bg-slate-950 px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-white shadow-[0_15px_40px_rgba(15,23,42,0.22)] transition hover:bg-black sm:bottom-4 sm:right-4 sm:px-5 sm:py-4 sm:tracking-[0.2em]'
           : 'rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs uppercase tracking-[0.2em] text-white transition hover:bg-white/20'}
       >
         {variant === 'global' ? 'chats' : 'chat'}
@@ -218,13 +218,13 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
       </button>
 
       <aside
-        className={`fixed bottom-6 right-6 z-50 flex h-[min(38rem,calc(100dvh-3rem))] w-[min(24rem,calc(100vw-3rem))] origin-bottom-right flex-col overflow-hidden rounded-[1.5rem] border border-black/10 bg-slate-950 text-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] transition duration-200 ${open ? 'translate-y-0 scale-100 opacity-100' : 'pointer-events-none translate-y-4 scale-95 opacity-0'}`}
+        className={`fixed inset-x-3 bottom-3 z-50 flex h-[min(36rem,calc(100dvh-1.5rem))] w-auto origin-bottom-right flex-col overflow-hidden rounded-[1.25rem] border border-black/10 bg-slate-950 text-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] transition duration-200 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:h-[min(38rem,calc(100dvh-3rem))] sm:w-[min(24rem,calc(100vw-3rem))] sm:rounded-[1.5rem] ${open ? 'translate-y-0 scale-100 opacity-100' : 'pointer-events-none translate-y-4 scale-95 opacity-0'}`}
       >
-        <div className="border-b border-white/10 p-5">
+        <div className="border-b border-white/10 p-4 sm:p-5">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-white/50">{activeRoom.section}</p>
-              <h2 className="mt-2 text-2xl font-black uppercase tracking-[0.18em]">{activeRoom.title}</h2>
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.18em] text-white/50 sm:tracking-[0.3em]">{activeRoom.section}</p>
+              <h2 className="mt-2 break-words text-xl font-black uppercase tracking-[0.1em] sm:text-2xl sm:tracking-[0.18em]">{activeRoom.title}</h2>
             </div>
             <button
               type="button"
@@ -235,13 +235,13 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
             </button>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-full border border-white/10 bg-white/5 p-1 sm:mt-5">
             {(['current', 'saved'] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${activeTab === tab ? 'bg-white text-slate-950' : 'text-white/65 hover:bg-white/10'}`}
+                className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${activeTab === tab ? 'bg-white text-slate-950' : 'text-white/65 hover:bg-white/10'}`}
               >
                 {tab === 'saved' ? 'chats' : tab}
               </button>
@@ -251,18 +251,18 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
 
         {activeTab === 'current' ? (
           <>
-            <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-3">
-              <p className="text-xs uppercase tracking-[0.22em] text-white/50">general room</p>
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3 sm:gap-4 sm:px-5">
+              <p className="text-xs uppercase tracking-[0.14em] text-white/50 sm:tracking-[0.22em]">general room</p>
               <button
                 type="button"
                 onClick={toggleSavedRoom}
-                className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${savedCurrentRoom ? 'bg-white text-slate-950' : 'border border-white/15 text-white hover:bg-white/10'}`}
+                className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${savedCurrentRoom ? 'bg-white text-slate-950' : 'border border-white/15 text-white hover:bg-white/10'}`}
               >
                 {savedCurrentRoom ? 'joined' : 'join'}
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
               {messages.length === 0 ? (
                 <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-sm leading-6 text-white/60">
                   No live chat yet. Start the room.
@@ -282,7 +282,7 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
               )}
             </div>
 
-            <div className="border-t border-white/10 p-5">
+            <div className="border-t border-white/10 p-4 sm:p-5">
               <div className="flex gap-3">
                 <input
                   value={messageBody}
@@ -296,7 +296,7 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
                 <button
                   type="button"
                   onClick={addMessage}
-                  className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-slate-950"
+                  className="rounded-2xl bg-white px-3 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-slate-950 sm:px-4 sm:tracking-[0.18em]"
                 >
                   send
                 </button>
@@ -304,7 +304,7 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
             </div>
           </>
         ) : (
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
             {savedRooms.length === 0 ? (
               <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-sm leading-6 text-white/60">
                 Joined chats will appear here.

@@ -98,20 +98,20 @@ export default function SubmitPageModal() {
           setOpen(true)
           setMessage('')
         }}
-        className="text-[0.95rem] uppercase tracking-[0.3em] text-black hover:text-gray-700"
+        className="text-xs uppercase tracking-[0.16em] text-black hover:text-gray-700 sm:text-[0.95rem] sm:tracking-[0.3em]"
       >
         Submit Page
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black/65 px-6 py-10">
-          <form onSubmit={submitPage} className="w-full max-w-2xl rounded-[2rem] border border-black/10 bg-white p-8 text-black shadow-[0_30px_80px_rgba(0,0,0,0.3)]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/65 px-4 py-6 sm:px-6 sm:py-10">
+          <form onSubmit={submitPage} className="w-full max-w-2xl rounded-[1.5rem] border border-black/10 bg-white p-5 text-black shadow-[0_30px_80px_rgba(0,0,0,0.3)] sm:rounded-[2rem] sm:p-8">
             <div className="mb-6 flex items-start justify-between gap-4">
-              <h2 className="text-2xl font-black uppercase tracking-[0.2em] text-black">Submit Page</h2>
+              <h2 className="break-words text-xl font-black uppercase tracking-[0.12em] text-black sm:text-2xl sm:tracking-[0.2em]">Submit Page</h2>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-full border border-black/10 px-4 py-2 text-sm font-semibold uppercase tracking-[0.2em] text-black transition hover:bg-gray-100"
+                className="rounded-full border border-black/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-black transition hover:bg-gray-100 sm:px-4 sm:text-sm sm:tracking-[0.2em]"
               >
                 close
               </button>
