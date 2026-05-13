@@ -295,7 +295,7 @@ export default function Home() {
       ]
     : activeCategories
   const browseRail = (
-    <div className="space-y-4">
+    <div className="w-full min-w-0 space-y-4">
       {orderedCategories.map((category) => {
         const orderedCategorySubcategories = getOrderedSubcategories(category)
         const visibleSubcategories = useDesktopCategoryOrder
@@ -303,7 +303,7 @@ export default function Home() {
           : orderedCategorySubcategories
 
         return (
-          <div key={category.title} className="space-y-3">
+          <div key={category.title} className="min-w-0 space-y-3">
             <button
               type="button"
               onClick={() => chooseCategory(category)}
@@ -316,7 +316,7 @@ export default function Home() {
             </button>
 
             {openCategory === category.title && (
-              <div className="grid max-h-[15.75rem] gap-3 overflow-y-auto overscroll-contain scroll-smooth rounded-[1.35rem] border border-black/10 bg-white/95 p-3 pr-2 shadow-[0_15px_35px_rgba(15,23,42,0.08)] [-webkit-overflow-scrolling:touch] lg:max-h-none lg:overflow-visible lg:pr-3">
+              <div className="grid max-h-[11.5rem] gap-3 overflow-y-auto overscroll-contain scroll-smooth rounded-[1.35rem] border border-black/10 bg-white/95 p-3 pr-2 shadow-[0_15px_35px_rgba(15,23,42,0.08)] [-webkit-overflow-scrolling:touch] lg:max-h-none lg:overflow-visible lg:pr-3">
                 {visibleSubcategories.map((subcategory) => {
                 const subcategoryPages = openSection
                   ? getPagesForSubcategory(openSection, category.title, subcategory.title)
@@ -345,7 +345,7 @@ export default function Home() {
                                 type="button"
                                 onClick={() => {
                                   setSelectedPageId((current) => current === page.id ? '' : page.id)
-                                  setSelectedPagePlacement('content')
+                                  setSelectedPagePlacement('rail')
                                 }}
                                 className={`w-full rounded-[1rem] border p-4 text-left transition hover:-translate-y-0.5 ${selectedPageId === page.id ? 'border-black bg-slate-950 text-white' : 'border-black/10 bg-white text-black'}`}
                               >
@@ -360,6 +360,12 @@ export default function Home() {
                   </div>
                 )
                 })}
+              </div>
+            )}
+
+            {openCategory === category.title && selectedPage && selectedPagePlacement === 'rail' && (
+              <div className="mt-4 w-full max-w-full lg:hidden">
+                <CompactPagePreview key={selectedPage.id} page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
               </div>
             )}
           </div>
@@ -471,11 +477,11 @@ export default function Home() {
               </div>
             ) : (
               <div className={`grid w-full gap-8 ${openSection === 'humans' ? 'lg:grid-cols-[minmax(0,1fr)_20rem]' : 'lg:grid-cols-[20rem_minmax(0,1fr)]'}`}>
-                <aside className={openSection === 'humans' ? 'lg:order-2' : ''}>
+                <aside className={`min-w-0 ${openSection === 'humans' ? 'lg:order-2' : ''}`}>
                   {browseRail}
                 </aside>
 
-                <div className={`${openSection === 'humans' ? 'lg:order-1' : ''} ${selectedPage && selectedPagePlacement === 'content' ? 'block' : 'hidden'} lg:block ${selectedPage && selectedPagePlacement === 'rail' ? 'lg:block' : ''}`}>
+                <div className={`min-w-0 ${openSection === 'humans' ? 'lg:order-1' : ''} ${selectedPage && selectedPagePlacement === 'content' ? 'block' : 'hidden'} lg:block ${selectedPage && selectedPagePlacement === 'rail' ? 'lg:block' : ''}`}>
                   {browseContent}
                 </div>
               </div>
