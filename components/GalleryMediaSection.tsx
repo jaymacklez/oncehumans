@@ -106,7 +106,7 @@ export default function GalleryMediaSection({
   return (
     <section className={`${compact ? 'rounded-[1.5rem] p-5' : 'rounded-[2rem] p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]'} border border-black/10 bg-white/95`}>
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className={`${compact ? 'text-sm tracking-[0.25em]' : 'text-3xl tracking-[0.2em]'} font-black uppercase text-black`}>
+        <h2 className={`${compact ? 'text-xs tracking-[0.14em]' : 'text-sm tracking-[0.16em]'} font-black uppercase text-black/70`}>
           Gallery
         </h2>
         <label className="cursor-pointer rounded-full border border-black/10 bg-black px-5 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-slate-900">
@@ -144,7 +144,7 @@ export default function GalleryMediaSection({
                 <button
                   type="button"
                   onClick={() => deleteMedia(upload.id)}
-                  className="absolute right-1 top-1 rounded-full bg-black/75 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white backdrop-blur transition hover:bg-black"
+                  className="absolute right-1 top-1 rounded-full bg-black/75 px-2 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.08em] text-white backdrop-blur transition hover:bg-black"
                 >
                   delete
                 </button>
@@ -196,7 +196,7 @@ export default function GalleryMediaSection({
               <button
                 type="button"
                 onClick={() => deleteMedia(activeMedia.id)}
-                className="rounded-full border border-black/10 px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-black transition hover:bg-gray-100"
+                className="rounded-full border border-black/10 px-4 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-black/65 transition hover:bg-gray-100 hover:text-black"
               >
                 delete
               </button>

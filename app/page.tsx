@@ -21,15 +21,61 @@ type CompactPagePreviewProps = {
   onBack?: () => void
 }
 
+type CompactPost = {
+  id: string
+  date: string
+  body: string
+}
+
+const readStoredCompactPosts = (storageKey: string): CompactPost[] => {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const storedPosts = window.localStorage.getItem(storageKey)
+    return storedPosts ? JSON.parse(storedPosts) : []
+  } catch {
+    return []
+  }
+}
+
 function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePreviewProps) {
   const [postBody, setPostBody] = useState('')
-  const [posts, setPosts] = useState<string[]>([])
+  const postsStorageKey = `once-humans-entry-posts:${page.id}`
+  const [posts, setPosts] = useState<CompactPost[]>(() => readStoredCompactPosts(postsStorageKey))
   const relatedPages = getRelatedPages(page)
+
+  useEffect(() => {
+    window.localStorage.setItem(postsStorageKey, JSON.stringify(posts))
+  }, [posts, postsStorageKey])
 
   const addPost = () => {
     if (!postBody.trim()) return
-    setPosts((current) => [postBody.trim(), ...current])
+    setPosts((current) => [
+      {
+        id: `${Date.now()}`,
+        date: new Date().toISOString(),
+        body: postBody.trim(),
+      },
+      ...current,
+    ])
     setPostBody('')
+  }
+
+  const deletePost = (postId: string) => {
+    setPosts((current) => current.filter((post) => post.id !== postId))
+  }
+
+  const formatPostDate = (value: string) => {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+
+    return date.toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
   }
 
   return (
@@ -75,7 +121,7 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
       />
 
       <section className="rounded-[1.25rem] border border-black/10 bg-slate-50 p-4 sm:rounded-[1.5rem] sm:p-5">
-        <h3 className="text-sm font-black uppercase tracking-[0.16em] text-black sm:tracking-[0.25em]">Posts</h3>
+        <h3 className="text-xs font-black uppercase tracking-[0.14em] text-black/70">Posts</h3>
         <textarea
           value={postBody}
           onChange={(event) => setPostBody(event.target.value)}
@@ -96,10 +142,33 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
           {posts.length === 0 ? (
             <p className="text-sm text-black/50">No posts yet.</p>
           ) : (
-            posts.map((post, index) => (
-              <div key={index} className="rounded-[1.1rem] border border-black/10 bg-white p-4 text-sm leading-6 text-black/75">
-                {post}
-              </div>
+            posts.map((post) => (
+              <article key={post.id} className="rounded-[1.1rem] border border-black/10 bg-white p-4">
+                <div>
+                  <p className="text-[0.6rem] uppercase tracking-[0.16em] text-black/40">posted</p>
+                  <p className="mt-1 text-[0.65rem] font-black uppercase tracking-[0.1em] text-black/50">{formatPostDate(post.date)}</p>
+                </div>
+                <p className="mt-3 text-base leading-7 text-black/85">{post.body}</p>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => deletePost(post.id)}
+                    className="rounded-full border border-black/10 bg-white px-3 py-2 text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-black/60 transition hover:bg-slate-100 hover:text-black"
+                  >
+                    delete
+                  </button>
+                  <LiveChatDrawer
+                    variant="post"
+                    room={{
+                      id: `entry:${page.id}:post:${post.id}`,
+                      title: post.body.length > 64 ? `${post.body.slice(0, 64)}...` : post.body,
+                      section: page.section,
+                      eyebrow: `post from ${page.title}`,
+                      href: `/entry/${page.id}`,
+                    }}
+                  />
+                </div>
+              </article>
             ))
           )}
         </div>
@@ -227,22 +296,37 @@ export default function Home() {
     : activeCategories
   const browseRail = (
     <div className="space-y-4">
-      {orderedCategories.map((category) => (
-        <div key={category.title} className="space-y-3">
-          <button
-            type="button"
-            onClick={() => chooseCategory(category)}
-            className={`group block w-full overflow-hidden rounded-[1.6rem] border text-left shadow-[0_18px_45px_rgba(15,23,42,0.13)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.18)] ${openCategory === category.title ? 'border-black bg-black' : 'border-black/10 bg-slate-950'}`}
-          >
-            <div className={`h-28 rounded-t-[1.6rem] bg-gradient-to-br ${category.accent} bg-cover bg-center`} />
-            <div className="bg-slate-950 p-5">
-              <h3 className="break-words text-lg font-black uppercase tracking-[0.12em] text-white sm:text-xl sm:tracking-[0.18em]">{category.title}</h3>
-            </div>
-          </button>
+      {orderedCategories.map((category) => {
+        const orderedCategorySubcategories = getOrderedSubcategories(category)
+        const activeSubcategory = orderedCategorySubcategories.find((subcategory) => subcategory.title === openSubcategory)
+        const staticSubcategories = activeSubcategory
+          ? [
+              activeSubcategory,
+              ...orderedCategorySubcategories.filter((subcategory) => subcategory.title !== activeSubcategory.title),
+            ].slice(0, 3)
+          : orderedCategorySubcategories.slice(0, 3)
+        const visibleSubcategories = selectedPageId
+          ? staticSubcategories
+          : useDesktopCategoryOrder
+            ? orderedCategorySubcategories.slice(0, 3)
+            : orderedCategorySubcategories
 
-          {openCategory === category.title && (
-            <div className="grid max-h-[15.75rem] gap-3 overflow-y-auto overscroll-contain scroll-smooth rounded-[1.35rem] border border-black/10 bg-white/95 p-3 pr-2 shadow-[0_15px_35px_rgba(15,23,42,0.08)] [-webkit-overflow-scrolling:touch] lg:max-h-none lg:overflow-visible lg:pr-3">
-              {(useDesktopCategoryOrder ? getOrderedSubcategories(category).slice(0, 3) : getOrderedSubcategories(category)).map((subcategory) => {
+        return (
+          <div key={category.title} className="space-y-3">
+            <button
+              type="button"
+              onClick={() => chooseCategory(category)}
+              className={`group block w-full overflow-hidden rounded-[1.6rem] border text-left shadow-[0_18px_45px_rgba(15,23,42,0.13)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.18)] ${openCategory === category.title ? 'border-black bg-black' : 'border-black/10 bg-slate-950'}`}
+            >
+              <div className={`h-28 rounded-t-[1.6rem] bg-gradient-to-br ${category.accent} bg-cover bg-center`} />
+              <div className="bg-slate-950 p-5">
+                <h3 className="break-words text-lg font-black uppercase tracking-[0.12em] text-white sm:text-xl sm:tracking-[0.18em]">{category.title}</h3>
+              </div>
+            </button>
+
+            {openCategory === category.title && (
+              <div className={`grid gap-3 rounded-[1.35rem] border border-black/10 bg-white/95 p-3 shadow-[0_15px_35px_rgba(15,23,42,0.08)] ${selectedPageId ? 'pr-3' : 'max-h-[15.75rem] overflow-y-auto overscroll-contain scroll-smooth pr-2 [-webkit-overflow-scrolling:touch]'} lg:max-h-none lg:overflow-visible lg:pr-3`}>
+                {visibleSubcategories.map((subcategory) => {
                 const subcategoryPages = openSection
                   ? getPagesForSubcategory(openSection, category.title, subcategory.title)
                   : []
@@ -279,7 +363,7 @@ export default function Home() {
 
                               {selectedPageId === page.id && selectedPage && (
                                 <div className="lg:hidden">
-                                  <CompactPagePreview page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
+                                  <CompactPagePreview key={selectedPage.id} page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
                                 </div>
                               )}
                             </div>
@@ -289,16 +373,17 @@ export default function Home() {
                     )}
                   </div>
                 )
-              })}
-            </div>
-          )}
-        </div>
-      ))}
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 
   const browseContent = selectedPage ? (
-    <CompactPagePreview page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
+    <CompactPagePreview key={selectedPage.id} page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
   ) : selectedCategory ? (
     <div className="space-y-4 rounded-[1.5rem] border border-black/10 bg-white/80 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.08)] sm:rounded-[2rem] sm:p-6">
       <div className="flex flex-wrap gap-3">

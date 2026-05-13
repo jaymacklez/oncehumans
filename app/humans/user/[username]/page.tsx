@@ -345,7 +345,7 @@ export default function HumanUserPage() {
         />
 
         <section className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
-          <h2 className="mb-6 text-3xl font-black uppercase tracking-[0.2em] text-black">Posts</h2>
+          <h2 className="mb-5 text-sm font-black uppercase tracking-[0.16em] text-black/70">Posts</h2>
           <textarea
             value={postBody}
             onChange={(e) => setPostBody(e.target.value)}
@@ -373,15 +373,15 @@ export default function HumanUserPage() {
             posts.map((post) => (
               <article key={post.id} className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.35em] text-black/50">posted</p>
-                  <h3 className="text-2xl font-black uppercase tracking-[0.15em] text-black">{formatPostDate(post.date)}</h3>
+                  <p className="text-[0.65rem] uppercase tracking-[0.18em] text-black/45">posted</p>
+                  <h3 className="mt-1 text-xs font-black uppercase tracking-[0.12em] text-black/55">{formatPostDate(post.date)}</h3>
                 </div>
-                <p className="mt-6 text-sm leading-7 text-black/80">{post.body}</p>
+                <p className="mt-5 text-lg leading-8 text-black/85">{post.body}</p>
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                   <button
                     type="button"
                     onClick={() => deletePost(post.id)}
-                    className="rounded-full border border-black/10 bg-white px-5 py-3 text-sm uppercase tracking-[0.2em] text-black transition hover:bg-slate-100"
+                    className="rounded-full border border-black/10 bg-white px-4 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-black/65 transition hover:bg-slate-100 hover:text-black"
                   >
                     delete
                   </button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import GalleryMediaSection from '@/components/GalleryMediaSection'
 import LiveChatDrawer from '@/components/LiveChatDrawer'
@@ -10,7 +10,17 @@ type Post = {
   id: string
   date: string
   body: string
-  comments: string[]
+}
+
+const readStoredPosts = (storageKey: string): Post[] => {
+  if (typeof window === 'undefined') return []
+
+  try {
+    const storedPosts = window.localStorage.getItem(storageKey)
+    return storedPosts ? JSON.parse(storedPosts) : []
+  } catch {
+    return []
+  }
 }
 
 type ContentPageSurfaceProps = {
@@ -21,20 +31,41 @@ type ContentPageSurfaceProps = {
 
 export default function ContentPageSurface({ page, onSelectRelated, relatedMode = 'inline' }: ContentPageSurfaceProps) {
   const [postBody, setPostBody] = useState('')
-  const [posts, setPosts] = useState<Post[]>([])
+  const postsStorageKey = `once-humans-entry-posts:${page.id}`
+  const [posts, setPosts] = useState<Post[]>(() => readStoredPosts(postsStorageKey))
+
+  useEffect(() => {
+    window.localStorage.setItem(postsStorageKey, JSON.stringify(posts))
+  }, [posts, postsStorageKey])
 
   const handlePost = () => {
     if (!postBody.trim()) return
     setPosts((current) => [
       {
         id: `${Date.now()}`,
-        date: new Date().toISOString().slice(0, 10),
+        date: new Date().toISOString(),
         body: postBody.trim(),
-        comments: [],
       },
       ...current,
     ])
     setPostBody('')
+  }
+
+  const deletePost = (postId: string) => {
+    setPosts((current) => current.filter((post) => post.id !== postId))
+  }
+
+  const formatPostDate = (value: string) => {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return value
+
+    return date.toLocaleString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
   }
 
   const relatedPages = getRelatedPages(page)
@@ -88,7 +119,7 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
       />
 
       <section className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
-        <h2 className="mb-6 text-3xl font-black uppercase tracking-[0.2em] text-black">Posts</h2>
+        <h2 className="mb-5 text-sm font-black uppercase tracking-[0.16em] text-black/70">Posts</h2>
         <textarea
           value={postBody}
           onChange={(event) => setPostBody(event.target.value)}
@@ -116,11 +147,18 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
           posts.map((post) => (
             <article key={post.id} className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
               <div>
-                <p className="text-sm uppercase tracking-[0.35em] text-black/50">posted</p>
-                <h3 className="text-2xl font-black uppercase tracking-[0.15em] text-black">{post.date}</h3>
+                <p className="text-[0.65rem] uppercase tracking-[0.18em] text-black/45">posted</p>
+                <h3 className="mt-1 text-xs font-black uppercase tracking-[0.12em] text-black/55">{formatPostDate(post.date)}</h3>
               </div>
-              <p className="mt-6 text-sm leading-7 text-black/80">{post.body}</p>
-              <div className="mt-6 flex justify-end">
+              <p className="mt-5 text-lg leading-8 text-black/85">{post.body}</p>
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => deletePost(post.id)}
+                  className="rounded-full border border-black/10 bg-white px-4 py-2 text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-black/65 transition hover:bg-slate-100 hover:text-black"
+                >
+                  delete
+                </button>
                 <LiveChatDrawer
                   variant="post"
                   room={{
