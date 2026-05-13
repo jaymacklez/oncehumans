@@ -204,14 +204,21 @@ export default function Home() {
                           </div>
                         ) : (
                           subcategoryPages.map((page) => (
-                            <button
-                              key={page.id}
-                              type="button"
-                              onClick={() => setSelectedPageId(page.id)}
-                              className={`rounded-[1rem] border p-4 text-left transition hover:-translate-y-0.5 ${selectedPageId === page.id ? 'border-black bg-slate-950 text-white' : 'border-black/10 bg-white text-black'}`}
-                            >
-                              <h3 className="break-words text-base font-black uppercase tracking-[0.08em] sm:tracking-[0.13em]">{page.title}</h3>
-                            </button>
+                            <div key={page.id} className="space-y-3">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPageId(page.id)}
+                                className={`w-full rounded-[1rem] border p-4 text-left transition hover:-translate-y-0.5 ${selectedPageId === page.id ? 'border-black bg-slate-950 text-white' : 'border-black/10 bg-white text-black'}`}
+                              >
+                                <h3 className="break-words text-base font-black uppercase tracking-[0.08em] sm:tracking-[0.13em]">{page.title}</h3>
+                              </button>
+
+                              {selectedPageId === page.id && selectedPage && (
+                                <div className="lg:hidden">
+                                  <CompactPagePreview page={selectedPage} onSelectRelated={focusPage} />
+                                </div>
+                              )}
+                            </div>
                           ))
                         )}
                       </div>
@@ -229,18 +236,18 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#f4ead4] text-black font-sans">
       <main className="mx-auto flex min-h-screen max-w-7xl flex-col items-center px-4 py-8 sm:px-6 sm:py-16">
-        <div className="flex w-full max-w-4xl flex-col items-stretch justify-center gap-4 sm:flex-row sm:items-center sm:gap-10">
+        <div className="flex w-full max-w-6xl items-stretch justify-center gap-3 sm:items-center sm:gap-10">
           <button
             type="button"
             onClick={() => chooseSection('once')}
-            className="w-full rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-6 py-6 text-4xl font-black uppercase tracking-[0.08em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-10 sm:py-7 sm:text-5xl sm:tracking-[0.18em] lg:text-[5rem] lg:tracking-[0.35em]"
+            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-3 py-5 text-center text-[clamp(1.45rem,6vw,5rem)] font-black uppercase tracking-[0.04em] text-black transition duration-200 hover:bg-[#d2b18c] sm:min-h-40 sm:px-8 sm:py-7 sm:tracking-[0.08em] lg:min-h-48 lg:px-6 lg:tracking-[0.06em]"
           >
             once
           </button>
           <button
             type="button"
             onClick={() => chooseSection('humans')}
-            className="w-full rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-6 py-6 text-4xl font-black uppercase tracking-[0.08em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-10 sm:py-7 sm:text-5xl sm:tracking-[0.18em] lg:text-[5rem] lg:tracking-[0.35em]"
+            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-3 py-5 text-center text-[clamp(1.45rem,6vw,5rem)] font-black uppercase tracking-[0.04em] text-black transition duration-200 hover:bg-[#d2b18c] sm:min-h-40 sm:px-8 sm:py-7 sm:tracking-[0.08em] lg:min-h-48 lg:px-6 lg:tracking-[0.06em]"
           >
             humans
           </button>
@@ -284,7 +291,7 @@ export default function Home() {
                   {browseRail}
                 </aside>
 
-                <div className={openSection === 'humans' ? 'lg:order-1' : ''}>
+                <div className={`hidden lg:block ${openSection === 'humans' ? 'lg:order-1' : ''}`}>
                   {selectedPage ? (
                     <CompactPagePreview page={selectedPage} onSelectRelated={focusPage} />
                   ) : (
