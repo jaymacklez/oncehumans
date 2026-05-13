@@ -179,7 +179,7 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
         <section className="rounded-[1rem] border border-black/10 bg-white/95 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
           <h2 className="text-xs font-black uppercase tracking-[0.14em] text-black">Related</h2>
           <div className="mt-3 overflow-x-auto pb-1">
-            <div className="flex w-max gap-2">
+            <div className="flex w-max gap-3">
               {relatedPages.map((relatedPage) => {
                 const content = (
                   <>
@@ -192,7 +192,7 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
                   </>
                 )
                 const className =
-                  'w-40 rounded-[0.9rem] border border-black/10 bg-slate-950 p-3 text-left text-white transition hover:-translate-y-0.5 hover:bg-black'
+                  'w-48 rounded-[0.9rem] border border-black/10 bg-slate-950 p-4 text-left text-white transition hover:-translate-y-0.5 hover:bg-black'
 
                 if (relatedMode === 'link') {
                   return (

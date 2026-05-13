@@ -79,7 +79,7 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
   }
 
   return (
-    <article className="space-y-4 rounded-[1.25rem] border border-black/10 bg-white/95 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:space-y-5 sm:rounded-[2rem] sm:p-6">
+    <article className="w-full max-w-full space-y-4 overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/95 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:space-y-5 sm:rounded-[2rem] sm:p-6">
       <div className="rounded-[1.25rem] bg-slate-950 p-4 text-white sm:rounded-[1.75rem] sm:p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -178,13 +178,13 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
         <section className="rounded-[1rem] border border-black/10 bg-slate-50 p-3">
           <h3 className="text-xs font-black uppercase tracking-[0.14em] text-black">Related</h3>
           <div className="mt-3 overflow-x-auto pb-1">
-            <div className="flex w-max gap-2">
+            <div className="flex w-max gap-3">
               {relatedPages.map((relatedPage) => (
                 <button
                   key={relatedPage.id}
                   type="button"
                   onClick={() => onSelectRelated(relatedPage)}
-                  className="w-36 rounded-[0.9rem] bg-slate-950 p-3 text-left text-white transition hover:-translate-y-0.5 hover:bg-black"
+                  className="w-44 rounded-[0.9rem] bg-slate-950 p-4 text-left text-white transition hover:-translate-y-0.5 hover:bg-black"
                 >
                   <p className="truncate text-[0.6rem] uppercase tracking-[0.12em] text-white/50">{relatedPage.subcategory}</p>
                   <h4 className="mt-1 truncate text-xs font-black uppercase tracking-[0.08em]">{relatedPage.title}</h4>
@@ -298,18 +298,9 @@ export default function Home() {
     <div className="space-y-4">
       {orderedCategories.map((category) => {
         const orderedCategorySubcategories = getOrderedSubcategories(category)
-        const activeSubcategory = orderedCategorySubcategories.find((subcategory) => subcategory.title === openSubcategory)
-        const staticSubcategories = activeSubcategory
-          ? [
-              activeSubcategory,
-              ...orderedCategorySubcategories.filter((subcategory) => subcategory.title !== activeSubcategory.title),
-            ].slice(0, 3)
-          : orderedCategorySubcategories.slice(0, 3)
-        const visibleSubcategories = selectedPageId
-          ? staticSubcategories
-          : useDesktopCategoryOrder
-            ? orderedCategorySubcategories.slice(0, 3)
-            : orderedCategorySubcategories
+        const visibleSubcategories = useDesktopCategoryOrder
+          ? orderedCategorySubcategories.slice(0, 3)
+          : orderedCategorySubcategories
 
         return (
           <div key={category.title} className="space-y-3">
@@ -325,7 +316,7 @@ export default function Home() {
             </button>
 
             {openCategory === category.title && (
-              <div className={`grid gap-3 rounded-[1.35rem] border border-black/10 bg-white/95 p-3 shadow-[0_15px_35px_rgba(15,23,42,0.08)] ${selectedPageId ? 'pr-3' : 'max-h-[15.75rem] overflow-y-auto overscroll-contain scroll-smooth pr-2 [-webkit-overflow-scrolling:touch]'} lg:max-h-none lg:overflow-visible lg:pr-3`}>
+              <div className="grid max-h-[15.75rem] gap-3 overflow-y-auto overscroll-contain scroll-smooth rounded-[1.35rem] border border-black/10 bg-white/95 p-3 pr-2 shadow-[0_15px_35px_rgba(15,23,42,0.08)] [-webkit-overflow-scrolling:touch] lg:max-h-none lg:overflow-visible lg:pr-3">
                 {visibleSubcategories.map((subcategory) => {
                 const subcategoryPages = openSection
                   ? getPagesForSubcategory(openSection, category.title, subcategory.title)
@@ -353,19 +344,14 @@ export default function Home() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  setSelectedPageId(page.id)
-                                  setSelectedPagePlacement('rail')
+                                  setSelectedPageId((current) => current === page.id ? '' : page.id)
+                                  setSelectedPagePlacement('content')
                                 }}
                                 className={`w-full rounded-[1rem] border p-4 text-left transition hover:-translate-y-0.5 ${selectedPageId === page.id ? 'border-black bg-slate-950 text-white' : 'border-black/10 bg-white text-black'}`}
                               >
                                 <h3 className="break-words text-base font-black uppercase tracking-[0.08em] sm:tracking-[0.13em]">{page.title}</h3>
                               </button>
 
-                              {selectedPageId === page.id && selectedPage && (
-                                <div className="lg:hidden">
-                                  <CompactPagePreview key={selectedPage.id} page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
-                                </div>
-                              )}
                             </div>
                           ))
                         )}
