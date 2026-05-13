@@ -76,28 +76,30 @@ export default function SubcategoryPageSurface({ section, category, subcategory,
         </div>
       </section>
 
-      <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {pages.map((page) => (
-          <button
-            key={page.id}
-            type="button"
-            onClick={() => setSelectedPage(page)}
-            className="group block w-full overflow-hidden rounded-[1.5rem] border border-black/10 bg-slate-950 text-left shadow-[0_25px_60px_rgba(15,23,42,0.18)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(15,23,42,0.22)]"
-          >
-            <div className={`h-32 rounded-t-[1.5rem] bg-gradient-to-br ${category.accent} bg-cover bg-center sm:h-40`} />
-            <div className="space-y-3 bg-slate-950 p-5">
-              <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-white/45">
-                {page.category}
-              </p>
-              <h2 className="break-words text-xl font-black uppercase tracking-[0.1em] text-white sm:text-2xl sm:tracking-[0.14em]">
-                {page.title}
-              </h2>
-              <p className="line-clamp-3 text-sm leading-6 text-white/65">
-                {page.description}
-              </p>
-            </div>
-          </button>
-        ))}
+      <section className="overflow-x-auto px-1 py-3 sm:overflow-visible sm:px-0 sm:py-0">
+        <div className="flex w-max gap-3 sm:grid sm:w-auto sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+          {pages.map((page) => (
+            <button
+              key={page.id}
+              type="button"
+              onClick={() => setSelectedPage(page)}
+              className="group block w-40 shrink-0 overflow-hidden rounded-[1rem] border border-black/10 bg-slate-950 text-left shadow-[0_18px_40px_rgba(15,23,42,0.16)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(15,23,42,0.22)] sm:w-full sm:rounded-[1.5rem]"
+            >
+              <div className={`h-20 rounded-t-[1rem] bg-gradient-to-br ${category.accent} bg-cover bg-center sm:h-40 sm:rounded-t-[1.5rem]`} />
+              <div className="space-y-2 bg-slate-950 p-3 sm:space-y-3 sm:p-5">
+                <p className="truncate text-[0.55rem] font-black uppercase tracking-[0.12em] text-white/45 sm:text-[0.65rem] sm:tracking-[0.18em]">
+                  {page.category}
+                </p>
+                <h2 className="line-clamp-2 text-sm font-black uppercase tracking-[0.08em] text-white sm:text-2xl sm:tracking-[0.14em]">
+                  {page.title}
+                </h2>
+                <p className="hidden text-sm leading-6 text-white/65 sm:line-clamp-3">
+                  {page.description}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
       </section>
 
       {pages.length === 0 && (
