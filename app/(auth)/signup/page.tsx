@@ -8,6 +8,10 @@ function slugifyName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, '-') || 'human'
 }
 
+function getTypeLabel(type: string) {
+  return type === 'human' ? 'Human' : type
+}
+
 export default function Signup() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -151,7 +155,7 @@ export default function Signup() {
                   onClick={() => handleChooseType(type)}
                   className="rounded-[1.5rem] border border-black/10 bg-slate-950 px-6 py-8 text-left text-white transition hover:-translate-y-0.5 hover:bg-black"
                 >
-                  <p className="text-xl font-black uppercase tracking-[0.2em]">{type}</p>
+                  <p className="text-xl font-black uppercase tracking-[0.2em]">{getTypeLabel(type)}</p>
                 </button>
               ))}
             </div>

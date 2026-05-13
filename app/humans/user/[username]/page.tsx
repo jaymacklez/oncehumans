@@ -252,7 +252,7 @@ export default function HumanUserPage() {
                       onChange={(event) => setHumanType(event.target.value)}
                       className="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-center text-xs uppercase tracking-[0.12em] text-white outline-none"
                     >
-                      <option value="human" className="text-black">human</option>
+                      <option value="human" className="text-black">Human</option>
                       {humanTypeOptions.map((option) => (
                         <option key={option} value={option} className="text-black">
                           {singularHumanTypes[option]}

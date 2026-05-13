@@ -324,7 +324,7 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
               {messages.length === 0 ? (
                 <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-sm leading-6 text-white/60">
-                  No live chat yet. Start the room.
+                  No chat yet. Start the room.
                 </div>
               ) : (
                 messages.map((message) => (
@@ -350,7 +350,7 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
                     if (event.key === 'Enter') addMessage()
                   }}
                   className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none placeholder:text-white/45"
-                  placeholder="say something"
+                  placeholder="Say something"
                 />
                 <button
                   type="button"

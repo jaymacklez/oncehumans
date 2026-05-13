@@ -8,6 +8,7 @@ import {
   type PendingSubmission,
   type SectionType,
 } from '@/lib/content'
+import { createClient } from '@/lib/supabase-browser'
 
 type SubmissionForm = {
   section: SectionType
@@ -15,7 +16,6 @@ type SubmissionForm = {
   subcategory: string
   title: string
   description: string
-  galleryNote: string
 }
 
 const defaultSubmissionForm: SubmissionForm = {
@@ -24,7 +24,6 @@ const defaultSubmissionForm: SubmissionForm = {
   subcategory: 'Household',
   title: '',
   description: '',
-  galleryNote: '',
 }
 
 function getCategory(section: SectionType, title: string) {
@@ -70,7 +69,7 @@ export default function SubmitPageModal() {
     }))
   }
 
-  const submitPage = (event: React.FormEvent) => {
+  const submitPage = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!form.title.trim() || !form.description.trim()) return
 
@@ -81,11 +80,33 @@ export default function SubmitPageModal() {
       subcategory: form.subcategory,
       title: form.title.trim(),
       description: form.description.trim(),
-      gallery: form.galleryNote.trim() ? [form.galleryNote.trim()] : [],
+      gallery: [],
       createdAt: new Date().toISOString(),
     }
     const savedSubmissions = JSON.parse(localStorage.getItem(pendingSubmissionsStorageKey) || '[]') as PendingSubmission[]
     localStorage.setItem(pendingSubmissionsStorageKey, JSON.stringify([pendingSubmission, ...savedSubmissions]))
+
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (user) {
+        const { error } = await supabase.from('page_submissions').insert({
+          user_id: user.id,
+          section: form.section,
+          category: form.category,
+          subcategory: form.subcategory,
+          title: form.title.trim(),
+          description: form.description.trim(),
+          status: 'pending',
+        })
+
+        if (error) throw error
+      }
+    } catch {
+      // Keep the local prototype backup if Supabase is not ready yet.
+    }
+
     setForm(defaultSubmissionForm)
     setMessage('Submission saved for review.')
   }
@@ -98,7 +119,7 @@ export default function SubmitPageModal() {
           setOpen(true)
           setMessage('')
         }}
-        className="text-xs uppercase tracking-[0.16em] text-black hover:text-gray-700 sm:text-[0.95rem] sm:tracking-[0.3em]"
+        className="whitespace-nowrap text-[0.72rem] uppercase tracking-[0.08em] text-black hover:text-gray-700 sm:text-[0.95rem] sm:tracking-[0.3em]"
       >
         Submit Page
       </button>
@@ -173,16 +194,6 @@ export default function SubmitPageModal() {
                 placeholder="What should people know first?"
               />
             </label>
-            <label className="mt-4 block space-y-2 text-sm font-semibold uppercase tracking-[0.2em] text-black">
-              Gallery note
-              <input
-                value={form.galleryNote}
-                onChange={(event) => setForm((current) => ({ ...current, galleryNote: event.target.value }))}
-                className="w-full rounded-2xl border border-black/10 bg-slate-50 px-4 py-3 text-sm normal-case tracking-normal"
-                placeholder="A visual idea or media note"
-              />
-            </label>
-
             <button
               type="submit"
               className="mt-6 rounded-full bg-black px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-slate-900"

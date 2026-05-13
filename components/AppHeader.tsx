@@ -37,15 +37,15 @@ export default function AppHeader() {
     router.push('/')
   }
 
-  const navLinkClass = 'text-xs uppercase tracking-[0.16em] text-black hover:text-gray-700 sm:text-[0.95rem] sm:tracking-[0.3em]'
+  const navLinkClass = 'whitespace-nowrap text-[0.72rem] uppercase tracking-[0.08em] text-black hover:text-gray-700 sm:text-[0.95rem] sm:tracking-[0.3em]'
 
   return (
-    <header className="flex flex-wrap items-start justify-between gap-4 px-4 py-4 sm:items-center sm:px-8 sm:py-6">
-      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+    <header className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-8 sm:py-6">
+      <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:justify-start sm:gap-4">
         {showHomeLink && (
           <Link
             href="/"
-            className="text-xs font-black uppercase tracking-[0.16em] text-black hover:text-gray-700 sm:text-[0.95rem] sm:tracking-[0.3em]"
+            className="whitespace-nowrap text-[0.72rem] font-black uppercase tracking-[0.08em] text-black hover:text-gray-700 sm:text-[0.95rem] sm:tracking-[0.3em]"
           >
             once humans
           </Link>
@@ -53,7 +53,7 @@ export default function AppHeader() {
         {profilePath && <SubmitPageModal />}
       </div>
       {profilePath ? (
-        <nav className="flex flex-wrap items-center justify-end gap-x-5 gap-y-3 sm:gap-x-16">
+        <nav className="flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-3 sm:w-auto sm:justify-end sm:gap-x-16">
           <Link
             href="/search"
             className={navLinkClass}
@@ -75,7 +75,7 @@ export default function AppHeader() {
           </button>
         </nav>
       ) : (
-        <nav className="flex flex-wrap items-center justify-end gap-x-5 gap-y-3 sm:gap-x-16">
+        <nav className="flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-3 sm:w-auto sm:justify-end sm:gap-x-16">
           <Link
             href="/search"
             className={navLinkClass}

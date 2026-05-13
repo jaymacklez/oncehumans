@@ -351,14 +351,14 @@ export default function Home() {
           <button
             type="button"
             onClick={() => chooseSection('once')}
-            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-2 py-3 text-center text-[clamp(1.55rem,10.8vw,4.25rem)] font-black uppercase leading-none tracking-[0.01em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-4 sm:py-5 sm:text-[clamp(3.1rem,6.4vw,5.4rem)] sm:tracking-[0.02em] lg:px-5 lg:py-6 lg:text-[clamp(4rem,6.1vw,6rem)]"
+            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-2 py-3 text-center text-[clamp(1.45rem,9.5vw,4.25rem)] font-black uppercase leading-none tracking-[0.01em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-4 sm:py-5 sm:text-[clamp(3.1rem,6.4vw,5.4rem)] sm:tracking-[0.02em] lg:px-5 lg:py-6 lg:text-[clamp(4rem,6.1vw,6rem)]"
           >
             once
           </button>
           <button
             type="button"
             onClick={() => chooseSection('humans')}
-            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-2 py-3 text-center text-[clamp(1.55rem,10.8vw,4.25rem)] font-black uppercase leading-none tracking-[0.01em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-4 sm:py-5 sm:text-[clamp(3.1rem,6.4vw,5.4rem)] sm:tracking-[0.02em] lg:px-5 lg:py-6 lg:text-[clamp(4rem,6.1vw,6rem)]"
+            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-2 py-3 text-center text-[clamp(1.45rem,9.5vw,4.25rem)] font-black uppercase leading-none tracking-[0.01em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-4 sm:py-5 sm:text-[clamp(3.1rem,6.4vw,5.4rem)] sm:tracking-[0.02em] lg:px-5 lg:py-6 lg:text-[clamp(4rem,6.1vw,6rem)]"
           >
             humans
           </button>
@@ -370,7 +370,7 @@ export default function Home() {
               <div className="space-y-3">
                 <h2 className="break-words text-3xl font-black uppercase tracking-[0.1em] text-black sm:text-5xl sm:tracking-[0.2em]">{openSection}</h2>
                 <p className="text-sm uppercase tracking-[0.16em] text-black/75 sm:text-base sm:tracking-[0.35em]">
-                  {openSection === 'once' ? 'during life' : 'in existence'}
+                  {openSection === 'once' ? 'during existence' : 'in existence'}
                 </p>
                 {openCategory && (
                   <p className="break-words text-xs uppercase tracking-[0.12em] text-black/45 sm:text-sm sm:tracking-[0.25em]">
@@ -402,7 +402,7 @@ export default function Home() {
                   {browseRail}
                 </aside>
 
-                <div className={`${openSection === 'humans' ? 'lg:order-1' : ''} ${selectedPage && selectedPagePlacement === 'rail' ? 'hidden lg:block' : ''}`}>
+                <div className={`${openSection === 'humans' ? 'lg:order-1' : ''} ${selectedPage && selectedPagePlacement === 'content' ? 'block' : 'hidden'} lg:block ${selectedPage && selectedPagePlacement === 'rail' ? 'lg:block' : ''}`}>
                   {browseContent}
                 </div>
               </div>
