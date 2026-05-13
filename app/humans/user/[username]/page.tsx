@@ -309,13 +309,24 @@ export default function HumanUserPage() {
           </div>
         </section>
 
-        <GalleryMediaSection emptyMessage="Upload photos or videos to populate this gallery." />
+        <GalleryMediaSection
+          emptyMessage="Upload photos or videos to populate this gallery."
+          storageKey={`once-humans-gallery:profile:${username}`}
+          chatSection="humans"
+          chatHref={`/humans/user/${username}?type=${encodeURIComponent(humanType)}`}
+          chatEyebrow={`gallery from ${displayType.toLowerCase()} ${username}`}
+        />
 
         <section className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="text-3xl font-black uppercase tracking-[0.2em] text-black">Posts</h2>
-            </div>
+          <h2 className="mb-6 text-3xl font-black uppercase tracking-[0.2em] text-black">Posts</h2>
+          <textarea
+            value={postBody}
+            onChange={(e) => setPostBody(e.target.value)}
+            className="w-full resize-none rounded-[1.75rem] border border-black/10 bg-slate-50 p-6 text-sm text-black outline-none focus:border-black/20"
+            rows={4}
+            placeholder="Write a new post..."
+          />
+          <div className="mt-5 flex justify-end">
             <button
               type="button"
               onClick={handlePost}
@@ -324,13 +335,6 @@ export default function HumanUserPage() {
               post
             </button>
           </div>
-          <textarea
-            value={postBody}
-            onChange={(e) => setPostBody(e.target.value)}
-            className="w-full resize-none rounded-[1.75rem] border border-black/10 bg-slate-50 p-6 text-sm text-black outline-none focus:border-black/20"
-            rows={4}
-            placeholder="Write a new post..."
-          />
         </section>
 
         <section className="space-y-6">
@@ -341,23 +345,23 @@ export default function HumanUserPage() {
           ) : (
             posts.map((post) => (
               <article key={post.id} className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm uppercase tracking-[0.35em] text-black/50">posted</p>
-                    <h3 className="text-2xl font-black uppercase tracking-[0.15em] text-black">{post.date}</h3>
-                  </div>
+                <div>
+                  <p className="text-sm uppercase tracking-[0.35em] text-black/50">posted</p>
+                  <h3 className="text-2xl font-black uppercase tracking-[0.15em] text-black">{post.date}</h3>
+                </div>
+                <p className="mt-6 text-sm leading-7 text-black/80">{post.body}</p>
+                <div className="mt-6 flex justify-end">
                   <LiveChatDrawer
                     variant="post"
                     room={{
                       id: `profile:${username}:post:${post.id}`,
                       title: post.body.length > 64 ? `${post.body.slice(0, 64)}...` : post.body,
                       section: 'humans',
-                      eyebrow: `post from human ${username}`,
+                      eyebrow: `post from ${displayType.toLowerCase()} ${username}`,
                       href: `/humans/user/${username}?type=${encodeURIComponent(humanType)}`,
                     }}
                   />
                 </div>
-                <p className="mt-6 text-sm leading-7 text-black/80">{post.body}</p>
               </article>
             ))
           )}

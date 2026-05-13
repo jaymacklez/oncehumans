@@ -11,7 +11,6 @@ type Post = {
   date: string
   body: string
   comments: string[]
-  open: boolean
 }
 
 type ContentPageSurfaceProps = {
@@ -32,15 +31,10 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
         date: new Date().toISOString().slice(0, 10),
         body: postBody.trim(),
         comments: [],
-        open: false,
       },
       ...current,
     ])
     setPostBody('')
-  }
-
-  const togglePostChat = (id: string) => {
-    setPosts((current) => current.map((post) => post.id === id ? { ...post, open: !post.open } : post))
   }
 
   const relatedPages = getRelatedPages(page)
@@ -84,7 +78,14 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
         </div>
       </section>
 
-      <GalleryMediaSection key={page.id} seedItems={page.gallery} />
+      <GalleryMediaSection
+        key={page.id}
+        seedItems={page.gallery}
+        storageKey={`once-humans-gallery:entry:${page.id}`}
+        chatSection={page.section}
+        chatHref={`/entry/${page.id}`}
+        chatEyebrow={`gallery from ${page.title}`}
+      />
 
       {relatedPages.length > 0 && (
         <section className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
@@ -128,8 +129,15 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
       )}
 
       <section className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <h2 className="text-3xl font-black uppercase tracking-[0.2em] text-black">Posts</h2>
+        <h2 className="mb-6 text-3xl font-black uppercase tracking-[0.2em] text-black">Posts</h2>
+        <textarea
+          value={postBody}
+          onChange={(event) => setPostBody(event.target.value)}
+          className="w-full resize-none rounded-[1.75rem] border border-black/10 bg-slate-50 p-6 text-sm text-black outline-none focus:border-black/20"
+          rows={4}
+          placeholder="Write a new post..."
+        />
+        <div className="mt-5 flex justify-end">
           <button
             type="button"
             onClick={handlePost}
@@ -138,13 +146,6 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
             post
           </button>
         </div>
-        <textarea
-          value={postBody}
-          onChange={(event) => setPostBody(event.target.value)}
-          className="w-full resize-none rounded-[1.75rem] border border-black/10 bg-slate-50 p-6 text-sm text-black outline-none focus:border-black/20"
-          rows={4}
-          placeholder="Write a new post..."
-        />
       </section>
 
       <section className="space-y-6">
@@ -155,25 +156,23 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
         ) : (
           posts.map((post) => (
             <article key={post.id} className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm uppercase tracking-[0.35em] text-black/50">posted</p>
-                  <h3 className="text-2xl font-black uppercase tracking-[0.15em] text-black">{post.date}</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => togglePostChat(post.id)}
-                  className="rounded-full border border-black/10 bg-slate-100 px-5 py-3 text-sm uppercase tracking-[0.2em] text-black"
-                >
-                  chat
-                </button>
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-black/50">posted</p>
+                <h3 className="text-2xl font-black uppercase tracking-[0.15em] text-black">{post.date}</h3>
               </div>
               <p className="mt-6 text-sm leading-7 text-black/80">{post.body}</p>
-              {post.open && (
-                <div className="mt-6 rounded-[1.75rem] border border-black/10 bg-slate-50 p-5 text-sm text-black/60">
-                  No chat entries yet.
-                </div>
-              )}
+              <div className="mt-6 flex justify-end">
+                <LiveChatDrawer
+                  variant="post"
+                  room={{
+                    id: `entry:${page.id}:post:${post.id}`,
+                    title: post.body.length > 64 ? `${post.body.slice(0, 64)}...` : post.body,
+                    section: page.section,
+                    eyebrow: `post from ${page.title}`,
+                    href: `/entry/${page.id}`,
+                  }}
+                />
+              </div>
             </article>
           ))
         )}

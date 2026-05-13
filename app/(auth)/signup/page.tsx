@@ -20,6 +20,7 @@ export default function Signup() {
   const supabase = createClient()
 
   const categoryOptions = [
+    'human',
     'Creators',
     'Artists',
     'Engineers',

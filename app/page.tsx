@@ -64,7 +64,15 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
         <p className="mt-6 max-w-3xl text-sm leading-7 text-white/78">{page.description}</p>
       </div>
 
-      <GalleryMediaSection key={page.id} seedItems={page.gallery} compact />
+      <GalleryMediaSection
+        key={page.id}
+        seedItems={page.gallery}
+        compact
+        storageKey={`once-humans-gallery:entry:${page.id}`}
+        chatSection={page.section}
+        chatHref={`/entry/${page.id}`}
+        chatEyebrow={`gallery from ${page.title}`}
+      />
 
       {relatedPages.length > 0 && (
         <section className="rounded-[1.25rem] border border-black/10 bg-slate-50 p-4 sm:rounded-[1.5rem] sm:p-5">
@@ -86,8 +94,15 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
       )}
 
       <section className="rounded-[1.25rem] border border-black/10 bg-slate-50 p-4 sm:rounded-[1.5rem] sm:p-5">
-        <div className="flex items-center justify-between gap-4">
-          <h3 className="text-sm font-black uppercase tracking-[0.16em] text-black sm:tracking-[0.25em]">Posts</h3>
+        <h3 className="text-sm font-black uppercase tracking-[0.16em] text-black sm:tracking-[0.25em]">Posts</h3>
+        <textarea
+          value={postBody}
+          onChange={(event) => setPostBody(event.target.value)}
+          className="mt-4 w-full resize-none rounded-[1.25rem] border border-black/10 bg-white p-4 text-sm text-black outline-none focus:border-black/25"
+          rows={3}
+          placeholder="Write a new post..."
+        />
+        <div className="mt-4 flex justify-end">
           <button
             type="button"
             onClick={addPost}
@@ -96,13 +111,6 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
             post
           </button>
         </div>
-        <textarea
-          value={postBody}
-          onChange={(event) => setPostBody(event.target.value)}
-          className="mt-4 w-full resize-none rounded-[1.25rem] border border-black/10 bg-white p-4 text-sm text-black outline-none focus:border-black/25"
-          rows={3}
-          placeholder="Write a new post..."
-        />
         <div className="mt-4 space-y-3">
           {posts.length === 0 ? (
             <p className="text-sm text-black/50">No posts yet.</p>

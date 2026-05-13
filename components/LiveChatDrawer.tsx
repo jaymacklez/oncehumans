@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 
 export type LiveChatSide = 'left' | 'right'
 
@@ -46,6 +46,7 @@ const savedRoomsStorageKey = 'once-humans-saved-chat-rooms'
 const profilePathStorageKey = 'once-humans-profile-path'
 const profilePathChangedEvent = 'once-humans-profile-changed'
 const chatStorageChangedEvent = 'once-humans-chat-storage-changed'
+const chatDrawerOpenedEvent = 'once-humans-chat-drawer-opened'
 
 function subscribeToProfilePath(onStoreChange: () => void) {
   window.addEventListener('storage', onStoreChange)
@@ -110,6 +111,7 @@ function createMessageId() {
 }
 
 export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDrawerProps) {
+  const [drawerId] = useState(() => createMessageId())
   const profilePath = useSyncExternalStore(subscribeToProfilePath, getProfilePathSnapshot, () => '')
   const messagesSnapshot = useSyncExternalStore(subscribeToChatStorage, getMessagesSnapshot, () => '{}')
   const savedRoomsSnapshot = useSyncExternalStore(subscribeToChatStorage, getSavedRoomsSnapshot, () => '{}')
@@ -158,6 +160,21 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
     () => savedRooms.reduce((total, savedRoom) => total + savedRoom.unreadCount, 0),
     [savedRooms]
   )
+
+  useEffect(() => {
+    const closeWhenAnotherDrawerOpens = (event: Event) => {
+      const openedDrawerId = (event as CustomEvent<{ drawerId: string }>).detail?.drawerId
+      if (openedDrawerId && openedDrawerId !== drawerId) {
+        setOpen(false)
+      }
+    }
+
+    window.addEventListener(chatDrawerOpenedEvent, closeWhenAnotherDrawerOpens)
+
+    return () => {
+      window.removeEventListener(chatDrawerOpenedEvent, closeWhenAnotherDrawerOpens)
+    }
+  }, [drawerId])
 
   const persistMessages = (nextMessagesByRoom: ChatMessagesByRoom) => {
     const nextMessagesByUser = {
@@ -249,6 +266,7 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
 
           setActiveRoom(currentRoom)
           setActiveTab(variant === 'global' ? 'saved' : 'current')
+          window.dispatchEvent(new CustomEvent(chatDrawerOpenedEvent, { detail: { drawerId } }))
           setOpen(true)
         }}
         className={variant === 'global'
