@@ -10,7 +10,6 @@ type Post = {
   date: string
   body: string
   comments: string[]
-  open: boolean
 }
 
 const singularHumanTypes: Record<string, string> = {
@@ -20,11 +19,22 @@ const singularHumanTypes: Record<string, string> = {
   Scientists: 'Scientist',
   Writers: 'Writer',
   Performers: 'Performer',
+  human: 'human',
 }
+
+const humanTypeOptions = [
+  'Creators',
+  'Artists',
+  'Engineers',
+  'Scientists',
+  'Writers',
+  'Performers',
+]
 
 const minProfileZoom = 1
 const maxProfileZoom = 3
 const cropBoxSize = 224
+const defaultDescription = 'Share a short bio, a mood, or the work you are bringing into the world.'
 
 type ProfileCrop = {
   src: string
@@ -46,21 +56,43 @@ const clampProfileOffset = (value: number, zoom: number) => {
   return Math.max(-maxOffset, Math.min(maxOffset, value))
 }
 
+function readLocalStorage<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback
+
+  try {
+    const value = localStorage.getItem(key)
+    return value ? JSON.parse(value) as T : fallback
+  } catch {
+    return fallback
+  }
+}
+
 export default function HumanUserPage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const usernameParam = params?.username
   const username = Array.isArray(usernameParam) ? usernameParam[0] : usernameParam || 'human'
-  const type = searchParams?.get('type') || 'human'
-  const displayType = singularHumanTypes[type] || type
+  const typeFromUrl = searchParams?.get('type') || ''
 
-  const [description, setDescription] = useState('Share a short bio, a mood, or the work you are bringing into the world.')
+  const [humanType, setHumanType] = useState(() => {
+    if (typeFromUrl) return typeFromUrl
+    if (typeof window === 'undefined') return 'human'
+    return localStorage.getItem(`once-humans-profile-type:${username}`) || 'human'
+  })
+  const descriptionStorageKey = `once-humans-profile-description:${username}`
+  const profileImageStorageKey = `once-humans-profile-image:${username}`
+  const postsStorageKey = `once-humans-profile-posts:${username}`
+
+  const [description, setDescription] = useState(() => (
+    typeof window === 'undefined' ? defaultDescription : localStorage.getItem(descriptionStorageKey) || defaultDescription
+  ))
   const [editingDescription, setEditingDescription] = useState(false)
-  const [profileImage, setProfileImage] = useState<ProfileCrop | null>(null)
+  const [editingHumanType, setEditingHumanType] = useState(false)
+  const [profileImage, setProfileImage] = useState<ProfileCrop | null>(() => readLocalStorage<ProfileCrop | null>(profileImageStorageKey, null))
   const [pendingProfileImage, setPendingProfileImage] = useState<ProfileCrop | null>(null)
   const [cropDrag, setCropDrag] = useState<CropDrag | null>(null)
   const [postBody, setPostBody] = useState('')
-  const [posts, setPosts] = useState<Post[]>([])
+  const [posts, setPosts] = useState<Post[]>(() => readLocalStorage<Post[]>(postsStorageKey, []))
 
   useEffect(() => {
     if (!pendingProfileImage) return
@@ -74,22 +106,47 @@ export default function HumanUserPage() {
   }, [pendingProfileImage])
 
   useEffect(() => {
+    localStorage.setItem(`once-humans-profile-type:${username}`, humanType)
     localStorage.setItem(
       'once-humans-profile-path',
-      `/humans/user/${username}?type=${encodeURIComponent(type)}`
+      `/humans/user/${username}?type=${encodeURIComponent(humanType)}`
     )
     window.dispatchEvent(new Event('once-humans-profile-changed'))
-  }, [type, username])
+  }, [humanType, username])
+
+  useEffect(() => {
+    localStorage.setItem(descriptionStorageKey, description)
+  }, [description, descriptionStorageKey])
+
+  useEffect(() => {
+    if (profileImage) {
+      localStorage.setItem(profileImageStorageKey, JSON.stringify(profileImage))
+      return
+    }
+
+    localStorage.removeItem(profileImageStorageKey)
+  }, [profileImage, profileImageStorageKey])
+
+  useEffect(() => {
+    localStorage.setItem(postsStorageKey, JSON.stringify(posts))
+  }, [posts, postsStorageKey])
+
+  const displayType = singularHumanTypes[humanType] || humanType
 
   const handleProfileImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-    setPendingProfileImage({
-      src: URL.createObjectURL(file),
-      zoom: 1.35,
-      offsetX: 0,
-      offsetY: 0,
+    const reader = new FileReader()
+    reader.addEventListener('load', () => {
+      if (typeof reader.result !== 'string') return
+      setPendingProfileImage({
+        src: reader.result,
+        zoom: 1.35,
+        offsetX: 0,
+        offsetY: 0,
+      })
     })
+    reader.readAsDataURL(file)
     event.target.value = ''
   }
 
@@ -159,15 +216,10 @@ export default function HumanUserPage() {
         date: new Date().toISOString().slice(0, 10),
         body: postBody.trim(),
         comments: [],
-        open: false,
       },
       ...current,
     ])
     setPostBody('')
-  }
-
-  const togglePostChat = (id: string) => {
-    setPosts((current) => current.map((post) => post.id === id ? { ...post, open: !post.open } : post))
   }
 
   return (
@@ -194,8 +246,30 @@ export default function HumanUserPage() {
                   <input type="file" accept="image/*" onChange={handleProfileImage} className="hidden" />
                 </label>
                 <div className="space-y-1 text-center">
-                  <p className="text-sm uppercase tracking-[0.35em] text-white/75">{displayType}</p>
+                  {editingHumanType ? (
+                    <select
+                      value={humanType}
+                      onChange={(event) => setHumanType(event.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-center text-xs uppercase tracking-[0.12em] text-white outline-none"
+                    >
+                      <option value="human" className="text-black">human</option>
+                      {humanTypeOptions.map((option) => (
+                        <option key={option} value={option} className="text-black">
+                          {singularHumanTypes[option]}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-sm uppercase tracking-[0.35em] text-white/75">{displayType}</p>
+                  )}
                   <p className="text-xs text-white/60">@{username}</p>
+                  <button
+                    type="button"
+                    onClick={() => setEditingHumanType((current) => !current)}
+                    className="mt-2 rounded-full border border-white/15 px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.16em] text-white/70 transition hover:bg-white/10"
+                  >
+                    {editingHumanType ? 'save type' : 'edit type'}
+                  </button>
                 </div>
               </div>
               <div className="mt-10 flex flex-col gap-3 rounded-[1.5rem] bg-white/10 p-4 text-sm text-white/90">
@@ -227,7 +301,7 @@ export default function HumanUserPage() {
                     id: `profile:${username}`,
                     title: username,
                     section: 'humans',
-                    href: `/humans/user/${username}?type=${encodeURIComponent(type)}`,
+                    href: `/humans/user/${username}?type=${encodeURIComponent(humanType)}`,
                   }}
                 />
               </div>
@@ -272,28 +346,18 @@ export default function HumanUserPage() {
                     <p className="text-sm uppercase tracking-[0.35em] text-black/50">posted</p>
                     <h3 className="text-2xl font-black uppercase tracking-[0.15em] text-black">{post.date}</h3>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => togglePostChat(post.id)}
-                    className="rounded-full border border-black/10 bg-slate-100 px-5 py-3 text-sm uppercase tracking-[0.2em] text-black"
-                  >
-                    chat
-                  </button>
+                  <LiveChatDrawer
+                    variant="post"
+                    room={{
+                      id: `profile:${username}:post:${post.id}`,
+                      title: post.body.length > 64 ? `${post.body.slice(0, 64)}...` : post.body,
+                      section: 'humans',
+                      eyebrow: `post from human ${username}`,
+                      href: `/humans/user/${username}?type=${encodeURIComponent(humanType)}`,
+                    }}
+                  />
                 </div>
                 <p className="mt-6 text-sm leading-7 text-black/80">{post.body}</p>
-                {post.open && (
-                  <div className="mt-6 space-y-3 rounded-[1.75rem] border border-black/10 bg-slate-50 p-5 text-sm text-black/80">
-                    {post.comments.length === 0 ? (
-                      <p className="text-black/60">No chat entries yet.</p>
-                    ) : (
-                      post.comments.map((comment, index) => (
-                        <div key={index} className="rounded-2xl bg-white px-4 py-3 shadow-sm">
-                          {comment}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
               </article>
             ))
           )}

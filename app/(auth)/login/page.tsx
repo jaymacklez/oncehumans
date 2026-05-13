@@ -12,49 +12,38 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [step, setStep] = useState<'form' | 'category'>('form')
-  const [userName, setUserName] = useState('')
   const [authMessage, setAuthMessage] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
-  const categoryOptions = [
-    'Creators',
-    'Artists',
-    'Engineers',
-    'Scientists',
-    'Writers',
-    'Performers',
-  ]
+  const openProfile = (nameSource: string, type = 'human') => {
+    const username = slugifyName(nameSource || email.split('@')[0] || 'human')
+    const savedType = localStorage.getItem(`once-humans-profile-type:${username}`) || type
+    const profilePath = `/humans/user/${username}?type=${encodeURIComponent(savedType)}`
+    localStorage.setItem('once-humans-profile-path', profilePath)
+    window.dispatchEvent(new Event('once-humans-profile-changed'))
+    router.push(profilePath)
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setAuthMessage('')
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
     if (error) {
       setAuthMessage(error.message)
-    } else {
-      router.push('/')
+    } else if (data.user) {
+      openProfile(data.user.user_metadata?.name || data.user.email || email)
     }
     setLoading(false)
   }
 
   const handlePreview = () => {
     setAuthMessage('')
-    setUserName(slugifyName(email.split('@')[0] || 'human'))
-    setStep('category')
-  }
-
-  const handleChooseType = (type: string) => {
-    const username = userName || slugifyName(email.split('@')[0] || 'human')
-    const profilePath = `/humans/user/${username}?type=${encodeURIComponent(type)}`
-    localStorage.setItem('once-humans-profile-path', profilePath)
-    window.dispatchEvent(new Event('once-humans-profile-changed'))
-    router.push(profilePath)
+    openProfile(email.split('@')[0] || 'human')
   }
 
   return (
@@ -65,8 +54,7 @@ export default function Login() {
             Sign in to Once Humans
           </h2>
         </div>
-        {step === 'form' ? (
-          <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
             <div className="rounded-md shadow-sm -space-y-px">
               <div>
                 <label htmlFor="email" className="sr-only">
@@ -125,33 +113,7 @@ export default function Login() {
                 Don&apos;t have an account? Sign up
               </a>
             </div>
-          </form>
-        ) : (
-          <div className="space-y-6">
-            <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-gray-500">what type of human are you?</p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {categoryOptions.map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => handleChooseType(type)}
-                  className="rounded-[1.5rem] border border-black/10 bg-slate-950 px-6 py-8 text-left text-white transition hover:-translate-y-0.5 hover:bg-black"
-                >
-                  <p className="text-xl font-black uppercase tracking-[0.2em]">{type}</p>
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => setStep('form')}
-              className="text-sm font-semibold text-black hover:underline"
-            >
-              Back to sign in
-            </button>
-          </div>
-        )}
+        </form>
       </div>
     </div>
   )

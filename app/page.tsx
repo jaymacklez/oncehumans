@@ -11,15 +11,17 @@ import {
   getPagesForSubcategory,
   seededPages,
   type Category,
+  type Subcategory,
   type SectionType,
 } from '@/lib/content'
 
 type CompactPagePreviewProps = {
   page: ContentPage
   onSelectRelated: (page: ContentPage) => void
+  onBack?: () => void
 }
 
-function CompactPagePreview({ page, onSelectRelated }: CompactPagePreviewProps) {
+function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePreviewProps) {
   const [postBody, setPostBody] = useState('')
   const [posts, setPosts] = useState<string[]>([])
   const relatedPages = getRelatedPages(page)
@@ -35,6 +37,15 @@ function CompactPagePreview({ page, onSelectRelated }: CompactPagePreviewProps) 
       <div className="rounded-[1.25rem] bg-slate-950 p-4 text-white sm:rounded-[1.75rem] sm:p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="mb-4 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/75 transition hover:bg-white/10"
+              >
+                back
+              </button>
+            )}
             <p className="break-words text-[0.7rem] uppercase tracking-[0.16em] text-white/55 sm:text-xs sm:tracking-[0.3em]">
               {page.section} / {page.category} / {page.subcategory}
             </p>
@@ -113,6 +124,8 @@ export default function Home() {
   const [openCategory, setOpenCategory] = useState('')
   const [openSubcategory, setOpenSubcategory] = useState('')
   const [selectedPageId, setSelectedPageId] = useState('')
+  const [selectedPagePlacement, setSelectedPagePlacement] = useState<'rail' | 'content'>('content')
+  const [useDesktopCategoryOrder, setUseDesktopCategoryOrder] = useState(false)
 
   const selectedPage = useMemo(() => findPageById(selectedPageId), [selectedPageId])
 
@@ -127,9 +140,20 @@ export default function Home() {
       setOpenCategory(page.category)
       setOpenSubcategory(page.subcategory)
       setSelectedPageId(page.id)
+      setSelectedPagePlacement('content')
     }, 0)
 
     return () => window.clearTimeout(timeout)
+  }, [])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)')
+    const syncViewport = () => setUseDesktopCategoryOrder(mediaQuery.matches)
+
+    syncViewport()
+    mediaQuery.addEventListener('change', syncViewport)
+
+    return () => mediaQuery.removeEventListener('change', syncViewport)
   }, [])
 
   const chooseSection = (section: SectionType) => {
@@ -137,17 +161,20 @@ export default function Home() {
     setOpenCategory('')
     setOpenSubcategory('')
     setSelectedPageId('')
+    setSelectedPagePlacement('content')
   }
 
   const chooseCategory = (category: Category) => {
     setOpenCategory((current) => current === category.title ? '' : category.title)
     setOpenSubcategory('')
     setSelectedPageId('')
+    setSelectedPagePlacement('content')
   }
 
   const chooseSubcategory = (subcategory: string) => {
     setOpenSubcategory((current) => current === subcategory ? '' : subcategory)
     setSelectedPageId('')
+    setSelectedPagePlacement('content')
   }
 
   const focusPage = (page: ContentPage) => {
@@ -155,10 +182,34 @@ export default function Home() {
     setOpenCategory(page.category)
     setOpenSubcategory(page.subcategory)
     setSelectedPageId(page.id)
+    setSelectedPagePlacement('content')
   }
 
+  const clearSelectedPage = () => {
+    setSelectedPageId('')
+    setSelectedPagePlacement('content')
+  }
+
+  const getSubcategoryPageCount = (category: Category, subcategory: Subcategory) => {
+    if (!openSection) return 0
+    return getPagesForSubcategory(openSection, category.title, subcategory.title).length
+  }
+
+  const getOrderedSubcategories = (category: Category) => (
+    [...category.subcategories].sort((firstSubcategory, secondSubcategory) => {
+      const countDifference = getSubcategoryPageCount(category, secondSubcategory) - getSubcategoryPageCount(category, firstSubcategory)
+      if (countDifference !== 0) return countDifference
+      return firstSubcategory.title.localeCompare(secondSubcategory.title)
+    })
+  )
+
   const activeCategories = openSection ? categories[openSection] : []
-  const orderedCategories = openCategory
+  const selectedCategory = activeCategories.find((category) => category.title === openCategory)
+  const orderedSubcategories = selectedCategory ? getOrderedSubcategories(selectedCategory) : []
+  const selectedSubcategoryPages = openSection && selectedCategory && openSubcategory
+    ? getPagesForSubcategory(openSection, selectedCategory.title, openSubcategory)
+    : []
+  const orderedCategories = openCategory && useDesktopCategoryOrder
     ? [
         ...activeCategories.filter((category) => category.title === openCategory),
         ...activeCategories.filter((category) => category.title !== openCategory),
@@ -181,7 +232,7 @@ export default function Home() {
 
           {openCategory === category.title && (
             <div className="grid gap-3 rounded-[1.35rem] border border-black/10 bg-white/95 p-3 shadow-[0_15px_35px_rgba(15,23,42,0.08)]">
-              {category.subcategories.map((subcategory) => {
+              {getOrderedSubcategories(category).slice(0, 3).map((subcategory) => {
                 const subcategoryPages = openSection
                   ? getPagesForSubcategory(openSection, category.title, subcategory.title)
                   : []
@@ -207,7 +258,10 @@ export default function Home() {
                             <div key={page.id} className="space-y-3">
                               <button
                                 type="button"
-                                onClick={() => setSelectedPageId(page.id)}
+                                onClick={() => {
+                                  setSelectedPageId(page.id)
+                                  setSelectedPagePlacement('rail')
+                                }}
                                 className={`w-full rounded-[1rem] border p-4 text-left transition hover:-translate-y-0.5 ${selectedPageId === page.id ? 'border-black bg-slate-950 text-white' : 'border-black/10 bg-white text-black'}`}
                               >
                                 <h3 className="break-words text-base font-black uppercase tracking-[0.08em] sm:tracking-[0.13em]">{page.title}</h3>
@@ -215,7 +269,7 @@ export default function Home() {
 
                               {selectedPageId === page.id && selectedPage && (
                                 <div className="lg:hidden">
-                                  <CompactPagePreview page={selectedPage} onSelectRelated={focusPage} />
+                                  <CompactPagePreview page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
                                 </div>
                               )}
                             </div>
@@ -233,21 +287,70 @@ export default function Home() {
     </div>
   )
 
+  const browseContent = selectedPage ? (
+    <CompactPagePreview page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
+  ) : selectedCategory ? (
+    <div className="space-y-4 rounded-[1.5rem] border border-black/10 bg-white/80 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.08)] sm:rounded-[2rem] sm:p-6">
+      <div className="flex flex-wrap gap-3">
+        {orderedSubcategories.map((subcategory) => {
+          return (
+            <button
+              key={subcategory.title}
+              type="button"
+              onClick={() => chooseSubcategory(subcategory.title)}
+              className={`rounded-[1rem] border px-5 py-4 text-left transition hover:-translate-y-0.5 ${openSubcategory === subcategory.title ? 'border-black bg-black text-white' : 'border-black/10 bg-slate-50 text-black'}`}
+            >
+              <h3 className="break-words text-base font-black uppercase tracking-[0.08em] sm:text-lg sm:tracking-[0.12em]">{subcategory.title}</h3>
+            </button>
+          )
+        })}
+      </div>
+
+      {openSubcategory && (
+        <div className="grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-2">
+          {selectedSubcategoryPages.length === 0 ? (
+            <div className="rounded-[1rem] border border-dashed border-black/15 bg-white p-4 text-sm text-black/55">
+              No starter entries here yet.
+            </div>
+          ) : (
+            selectedSubcategoryPages.map((page) => (
+              <button
+                key={page.id}
+                type="button"
+                onClick={() => {
+                  setSelectedPageId(page.id)
+                  setSelectedPagePlacement('content')
+                }}
+                className="rounded-[1rem] border border-black/10 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-black/25"
+              >
+                <h4 className="break-words text-base font-black uppercase tracking-[0.08em] text-black">{page.title}</h4>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  ) : (
+    <div className="rounded-[2rem] border border-black/10 bg-white/70 p-8 text-center text-sm text-black/60">
+      {seededPages.length} starter pages are ready to discover.
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-[#f4ead4] text-black font-sans">
       <main className="mx-auto flex min-h-screen max-w-7xl flex-col items-center px-4 py-8 sm:px-6 sm:py-16">
-        <div className="flex w-full max-w-6xl items-stretch justify-center gap-3 sm:items-center sm:gap-10">
+        <div className="flex w-full max-w-6xl items-stretch justify-center gap-2 sm:items-center sm:gap-6 lg:gap-8">
           <button
             type="button"
             onClick={() => chooseSection('once')}
-            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-3 py-5 text-center text-[clamp(1.45rem,6vw,5rem)] font-black uppercase tracking-[0.04em] text-black transition duration-200 hover:bg-[#d2b18c] sm:min-h-40 sm:px-8 sm:py-7 sm:tracking-[0.08em] lg:min-h-48 lg:px-6 lg:tracking-[0.06em]"
+            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-2 py-3 text-center text-[clamp(1.55rem,10.8vw,4.25rem)] font-black uppercase leading-none tracking-[0.01em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-4 sm:py-5 sm:text-[clamp(3.1rem,6.4vw,5.4rem)] sm:tracking-[0.02em] lg:px-5 lg:py-6 lg:text-[clamp(4rem,6.1vw,6rem)]"
           >
             once
           </button>
           <button
             type="button"
             onClick={() => chooseSection('humans')}
-            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-3 py-5 text-center text-[clamp(1.45rem,6vw,5rem)] font-black uppercase tracking-[0.04em] text-black transition duration-200 hover:bg-[#d2b18c] sm:min-h-40 sm:px-8 sm:py-7 sm:tracking-[0.08em] lg:min-h-48 lg:px-6 lg:tracking-[0.06em]"
+            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-2 py-3 text-center text-[clamp(1.55rem,10.8vw,4.25rem)] font-black uppercase leading-none tracking-[0.01em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-4 sm:py-5 sm:text-[clamp(3.1rem,6.4vw,5.4rem)] sm:tracking-[0.02em] lg:px-5 lg:py-6 lg:text-[clamp(4rem,6.1vw,6rem)]"
           >
             humans
           </button>
@@ -291,14 +394,8 @@ export default function Home() {
                   {browseRail}
                 </aside>
 
-                <div className={`hidden lg:block ${openSection === 'humans' ? 'lg:order-1' : ''}`}>
-                  {selectedPage ? (
-                    <CompactPagePreview page={selectedPage} onSelectRelated={focusPage} />
-                  ) : (
-                    <div className="rounded-[2rem] border border-black/10 bg-white/70 p-8 text-center text-sm text-black/60">
-                      {seededPages.length} starter pages are ready to discover.
-                    </div>
-                  )}
+                <div className={`${openSection === 'humans' ? 'lg:order-1' : ''} ${selectedPage && selectedPagePlacement === 'rail' ? 'hidden lg:block' : ''}`}>
+                  {browseContent}
                 </div>
               </div>
             )}

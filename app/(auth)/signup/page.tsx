@@ -65,6 +65,7 @@ export default function Signup() {
   const handleChooseType = (type: string) => {
     const username = userName || slugifyName(name)
     const profilePath = `/humans/user/${username}?type=${encodeURIComponent(type)}`
+    localStorage.setItem(`once-humans-profile-type:${username}`, type)
     localStorage.setItem('once-humans-profile-path', profilePath)
     window.dispatchEvent(new Event('once-humans-profile-changed'))
     router.push(profilePath)
