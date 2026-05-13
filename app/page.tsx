@@ -406,6 +406,20 @@ export default function Home() {
               </div>
             )}
 
+            {openCategory === category.title && (
+              <div className="grid max-h-[11.5rem] gap-3 overflow-y-auto overscroll-contain scroll-smooth rounded-[1.35rem] border border-black/10 bg-white/95 p-3 pr-2 shadow-[0_15px_35px_rgba(15,23,42,0.08)] [-webkit-overflow-scrolling:touch] lg:hidden">
+                {getOrderedSubcategories(category).map((subcategory) => (
+                  <Link
+                    key={subcategory.title}
+                    href={`/${openSection}/${slugify(category.title)}/${slugify(subcategory.title)}`}
+                    className="w-full rounded-[1rem] border border-black/10 bg-slate-50 px-4 py-3 text-left text-black transition hover:-translate-y-0.5"
+                  >
+                    <h3 className="break-words text-sm font-black uppercase tracking-[0.1em]">{subcategory.title}</h3>
+                  </Link>
+                ))}
+              </div>
+            )}
+
             {openCategory === category.title && selectedPage && selectedPagePlacement === 'rail' && (
               <div className="mt-4 w-full max-w-full lg:hidden">
                 <CompactPagePreview key={selectedPage.id} page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
