@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import GalleryMediaSection from '@/components/GalleryMediaSection'
 import LiveChatDrawer from '@/components/LiveChatDrawer'
+import SubcategoryPageSurface from '@/components/SubcategoryPageSurface'
 import {
   categories,
   type ContentPage,
@@ -10,6 +12,7 @@ import {
   getRelatedPages,
   getPagesForSubcategory,
   seededPages,
+  slugify,
   type Category,
   type Subcategory,
   type SectionType,
@@ -177,7 +180,7 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
       {relatedPages.length > 0 && (
         <section className="rounded-[1rem] border border-black/10 bg-slate-50 p-3">
           <h3 className="text-xs font-black uppercase tracking-[0.14em] text-black">Related</h3>
-          <div className="mt-3 overflow-x-auto pb-1">
+          <div className="mt-1 overflow-x-auto px-1 py-3">
             <div className="flex w-max gap-3">
               {relatedPages.map((relatedPage) => (
                 <button
@@ -205,6 +208,10 @@ export default function Home() {
   const [selectedPageId, setSelectedPageId] = useState('')
   const [selectedPagePlacement, setSelectedPagePlacement] = useState<'rail' | 'content'>('content')
   const [useDesktopCategoryOrder, setUseDesktopCategoryOrder] = useState(false)
+  const [promotedCategory, setPromotedCategory] = useState('')
+  const [selectedCategoryOffset, setSelectedCategoryOffset] = useState(0)
+  const railRef = useRef<HTMLDivElement | null>(null)
+  const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   const selectedPage = useMemo(() => findPageById(selectedPageId), [selectedPageId])
 
@@ -213,7 +220,24 @@ export default function Home() {
       const params = new URLSearchParams(window.location.search)
       const entry = params.get('entry')
       const page = entry ? findPageById(entry) : undefined
-      if (!page) return
+      const sectionParam = params.get('section') as SectionType | null
+      const categoryParam = params.get('category')
+
+      if (!page) {
+        if ((sectionParam === 'once' || sectionParam === 'humans') && categoryParam) {
+          const category = categories[sectionParam].find((candidate) => slugify(candidate.title) === categoryParam)
+
+          if (category) {
+            setOpenSection(sectionParam)
+            setOpenCategory(category.title)
+            setOpenSubcategory('')
+            setSelectedPageId('')
+            setSelectedPagePlacement('content')
+          }
+        }
+
+        return
+      }
 
       setOpenSection(page.section)
       setOpenCategory(page.category)
@@ -235,23 +259,53 @@ export default function Home() {
     return () => mediaQuery.removeEventListener('change', syncViewport)
   }, [])
 
+  useEffect(() => {
+    let frame = 0
+
+    if (!useDesktopCategoryOrder || !openCategory) {
+      frame = window.requestAnimationFrame(() => setSelectedCategoryOffset(0))
+      return () => window.cancelAnimationFrame(frame)
+    }
+
+    const syncSelectedCategoryOffset = () => {
+      const rail = railRef.current
+      const categoryElement = categoryRefs.current[openCategory]
+
+      if (!rail || !categoryElement) {
+        setSelectedCategoryOffset(0)
+        return
+      }
+
+      setSelectedCategoryOffset(categoryElement.offsetTop - rail.offsetTop)
+    }
+
+    frame = window.requestAnimationFrame(syncSelectedCategoryOffset)
+    window.addEventListener('resize', syncSelectedCategoryOffset)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('resize', syncSelectedCategoryOffset)
+    }
+  }, [openCategory, openSection, useDesktopCategoryOrder])
+
   const chooseSection = (section: SectionType) => {
     setOpenSection((current) => current === section ? null : section)
     setOpenCategory('')
     setOpenSubcategory('')
+    setPromotedCategory('')
     setSelectedPageId('')
     setSelectedPagePlacement('content')
   }
 
   const chooseCategory = (category: Category) => {
-    setOpenCategory((current) => current === category.title ? '' : category.title)
+    setOpenCategory((current) => {
+      const nextCategory = current === category.title ? '' : category.title
+      if (!current) {
+        setPromotedCategory(nextCategory)
+      }
+      return nextCategory
+    })
     setOpenSubcategory('')
-    setSelectedPageId('')
-    setSelectedPagePlacement('content')
-  }
-
-  const chooseSubcategory = (subcategory: string) => {
-    setOpenSubcategory((current) => current === subcategory ? '' : subcategory)
     setSelectedPageId('')
     setSelectedPagePlacement('content')
   }
@@ -265,6 +319,12 @@ export default function Home() {
   }
 
   const clearSelectedPage = () => {
+    setSelectedPageId('')
+    setSelectedPagePlacement('content')
+  }
+
+  const openDesktopSubcategory = (subcategory: Subcategory) => {
+    setOpenSubcategory(subcategory.title)
     setSelectedPageId('')
     setSelectedPagePlacement('content')
   }
@@ -285,81 +345,64 @@ export default function Home() {
   const activeCategories = openSection ? categories[openSection] : []
   const selectedCategory = activeCategories.find((category) => category.title === openCategory)
   const orderedSubcategories = selectedCategory ? getOrderedSubcategories(selectedCategory) : []
-  const selectedSubcategoryPages = openSection && selectedCategory && openSubcategory
-    ? getPagesForSubcategory(openSection, selectedCategory.title, openSubcategory)
-    : []
-  const orderedCategories = openCategory && useDesktopCategoryOrder
+  const selectedSubcategory = selectedCategory?.subcategories.find((subcategory) => subcategory.title === openSubcategory)
+  const orderedCategories = promotedCategory
     ? [
-        ...activeCategories.filter((category) => category.title === openCategory),
-        ...activeCategories.filter((category) => category.title !== openCategory),
+        ...activeCategories.filter((category) => category.title === promotedCategory),
+        ...activeCategories.filter((category) => category.title !== promotedCategory),
       ]
     : activeCategories
   const browseRail = (
-    <div className="w-full min-w-0 space-y-4">
+    <div ref={railRef} className="w-full min-w-0 space-y-4">
       {orderedCategories.map((category) => {
-        const orderedCategorySubcategories = getOrderedSubcategories(category)
-        const visibleSubcategories = useDesktopCategoryOrder
-          ? orderedCategorySubcategories.slice(0, 3)
-          : orderedCategorySubcategories
-
         return (
-          <div key={category.title} className="min-w-0 space-y-3">
-            <button
-              type="button"
-              onClick={() => chooseCategory(category)}
-              className={`group block w-full overflow-hidden rounded-[1.6rem] border text-left shadow-[0_18px_45px_rgba(15,23,42,0.13)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.18)] ${openCategory === category.title ? 'border-black bg-black' : 'border-black/10 bg-slate-950'}`}
-            >
-              <div className={`h-28 rounded-t-[1.6rem] bg-gradient-to-br ${category.accent} bg-cover bg-center`} />
-              <div className="bg-slate-950 p-5">
-                <h3 className="break-words text-lg font-black uppercase tracking-[0.12em] text-white sm:text-xl sm:tracking-[0.18em]">{category.title}</h3>
-              </div>
-            </button>
+          <div
+            key={category.title}
+            ref={(element) => {
+              categoryRefs.current[category.title] = element
+            }}
+            className="min-w-0 space-y-3"
+          >
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => chooseCategory(category)}
+                className={`group block w-full overflow-hidden rounded-[1.6rem] border text-left shadow-[0_18px_45px_rgba(15,23,42,0.13)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.18)] ${openCategory === category.title ? 'border-black bg-black' : 'border-black/10 bg-slate-950'}`}
+              >
+                <div className={`h-28 rounded-t-[1.6rem] bg-gradient-to-br ${category.accent} bg-cover bg-center`} />
+                <div className="bg-slate-950 p-5">
+                  <h3 className="break-words text-lg font-black uppercase tracking-[0.12em] text-white sm:text-xl sm:tracking-[0.18em]">{category.title}</h3>
+                </div>
+              </button>
+
+              {openCategory === category.title && (
+                <div className="absolute right-3 top-3 z-10 lg:hidden">
+                  <LiveChatDrawer
+                    label="chat"
+                    room={{
+                      id: `category:${openSection}:${slugify(category.title)}`,
+                      title: category.title,
+                      section: openSection!,
+                      eyebrow: `${openSection} category`,
+                      href: `/#${openSection}-${slugify(category.title)}`,
+                    }}
+                  />
+                </div>
+              )}
+            </div>
 
             {openCategory === category.title && (
-              <div className="grid max-h-[11.5rem] gap-3 overflow-y-auto overscroll-contain scroll-smooth rounded-[1.35rem] border border-black/10 bg-white/95 p-3 pr-2 shadow-[0_15px_35px_rgba(15,23,42,0.08)] [-webkit-overflow-scrolling:touch] lg:max-h-none lg:overflow-visible lg:pr-3">
-                {visibleSubcategories.map((subcategory) => {
-                const subcategoryPages = openSection
-                  ? getPagesForSubcategory(openSection, category.title, subcategory.title)
-                  : []
-
-                return (
-                  <div key={subcategory.title} className="space-y-3">
-                    <button
-                      type="button"
-                      onClick={() => chooseSubcategory(subcategory.title)}
-                      className={`w-full rounded-[1rem] border px-4 py-3 text-left transition hover:-translate-y-0.5 ${openSubcategory === subcategory.title ? 'border-black bg-black text-white' : 'border-black/10 bg-slate-50 text-black'}`}
-                    >
-                      <h3 className="break-words text-sm font-black uppercase tracking-[0.1em] sm:tracking-[0.18em]">{subcategory.title}</h3>
-                    </button>
-
-                    {openSubcategory === subcategory.title && (
-                      <div className="grid gap-3 rounded-[1.1rem] border border-black/10 bg-slate-50 p-3">
-                        {subcategoryPages.length === 0 ? (
-                          <div className="rounded-[1rem] border border-dashed border-black/15 bg-white p-4 text-sm text-black/55">
-                            No starter entries here yet.
-                          </div>
-                        ) : (
-                          subcategoryPages.map((page) => (
-                            <div key={page.id} className="space-y-3">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedPageId((current) => current === page.id ? '' : page.id)
-                                  setSelectedPagePlacement('rail')
-                                }}
-                                className={`w-full rounded-[1rem] border p-4 text-left transition hover:-translate-y-0.5 ${selectedPageId === page.id ? 'border-black bg-slate-950 text-white' : 'border-black/10 bg-white text-black'}`}
-                              >
-                                <h3 className="break-words text-base font-black uppercase tracking-[0.08em] sm:tracking-[0.13em]">{page.title}</h3>
-                              </button>
-
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-                })}
+              <div className="hidden rounded-[1.35rem] bg-slate-950 p-4 shadow-[0_15px_35px_rgba(15,23,42,0.12)] lg:block">
+                <LiveChatDrawer
+                  label={`${category.title} chat`}
+                  room={{
+                    id: `category:${openSection}:${slugify(category.title)}`,
+                    title: category.title,
+                    section: openSection!,
+                    eyebrow: `${openSection} category`,
+                    href: `/#${openSection}-${slugify(category.title)}`,
+                  }}
+                />
               </div>
             )}
 
@@ -376,46 +419,39 @@ export default function Home() {
 
   const browseContent = selectedPage ? (
     <CompactPagePreview key={selectedPage.id} page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
+  ) : selectedCategory && selectedSubcategory ? (
+    <SubcategoryPageSurface
+      key={`${openSection}-${selectedCategory.title}-${selectedSubcategory.title}`}
+      section={openSection!}
+      category={selectedCategory}
+      subcategory={selectedSubcategory}
+      onBack={() => {
+        setOpenSubcategory('')
+        setSelectedPageId('')
+        setSelectedPagePlacement('content')
+      }}
+    />
   ) : selectedCategory ? (
     <div className="space-y-4 rounded-[1.5rem] border border-black/10 bg-white/80 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.08)] sm:rounded-[2rem] sm:p-6">
-      <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3">
         {orderedSubcategories.map((subcategory) => {
           return (
-            <button
+            <Link
               key={subcategory.title}
-              type="button"
-              onClick={() => chooseSubcategory(subcategory.title)}
+              href={`/${openSection}/${slugify(selectedCategory.title)}/${slugify(subcategory.title)}`}
+              onClick={(event) => {
+                if (!useDesktopCategoryOrder) return
+
+                event.preventDefault()
+                openDesktopSubcategory(subcategory)
+              }}
               className={`rounded-[1rem] border px-5 py-4 text-left transition hover:-translate-y-0.5 ${openSubcategory === subcategory.title ? 'border-black bg-black text-white' : 'border-black/10 bg-slate-50 text-black'}`}
             >
               <h3 className="break-words text-base font-black uppercase tracking-[0.08em] sm:text-lg sm:tracking-[0.12em]">{subcategory.title}</h3>
-            </button>
+            </Link>
           )
         })}
       </div>
-
-      {openSubcategory && (
-        <div className="grid gap-3 border-t border-black/10 pt-4 sm:grid-cols-2">
-          {selectedSubcategoryPages.length === 0 ? (
-            <div className="rounded-[1rem] border border-dashed border-black/15 bg-white p-4 text-sm text-black/55">
-              No starter entries here yet.
-            </div>
-          ) : (
-            selectedSubcategoryPages.map((page) => (
-              <button
-                key={page.id}
-                type="button"
-                onClick={() => {
-                  setSelectedPageId(page.id)
-                  setSelectedPagePlacement('content')
-                }}
-                className="rounded-[1rem] border border-black/10 bg-white p-4 text-left transition hover:-translate-y-0.5 hover:border-black/25"
-              >
-                <h4 className="break-words text-base font-black uppercase tracking-[0.08em] text-black">{page.title}</h4>
-              </button>
-            ))
-          )}
-        </div>
-      )}
     </div>
   ) : (
     <div className="rounded-[2rem] border border-black/10 bg-white/70 p-8 text-center text-sm text-black/60">
@@ -481,7 +517,10 @@ export default function Home() {
                   {browseRail}
                 </aside>
 
-                <div className={`min-w-0 ${openSection === 'humans' ? 'lg:order-1' : ''} ${selectedPage && selectedPagePlacement === 'content' ? 'block' : 'hidden'} lg:block ${selectedPage && selectedPagePlacement === 'rail' ? 'lg:block' : ''}`}>
+                <div
+                  className={`min-w-0 transition-[margin] duration-300 ${openSection === 'humans' ? 'lg:order-1' : ''} ${selectedPage && selectedPagePlacement === 'content' ? 'block' : 'hidden'} lg:block ${selectedPage && selectedPagePlacement === 'rail' ? 'lg:block' : ''}`}
+                  style={{ marginTop: selectedPage || selectedSubcategory ? 0 : selectedCategoryOffset }}
+                >
                   {browseContent}
                 </div>
               </div>

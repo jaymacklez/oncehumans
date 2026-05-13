@@ -27,9 +27,10 @@ type ContentPageSurfaceProps = {
   page: ContentPage
   onSelectRelated?: (page: ContentPage) => void
   relatedMode?: 'inline' | 'link'
+  onBack?: () => void
 }
 
-export default function ContentPageSurface({ page, onSelectRelated, relatedMode = 'inline' }: ContentPageSurfaceProps) {
+export default function ContentPageSurface({ page, onSelectRelated, relatedMode = 'inline', onBack }: ContentPageSurfaceProps) {
   const [postBody, setPostBody] = useState('')
   const postsStorageKey = `once-humans-entry-posts:${page.id}`
   const [posts, setPosts] = useState<Post[]>(() => readStoredPosts(postsStorageKey))
@@ -92,6 +93,15 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
           <div className="rounded-[2rem] border border-black/10 bg-slate-950 p-8 text-white">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
+                {onBack && (
+                  <button
+                    type="button"
+                    onClick={onBack}
+                    className="mb-5 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/75 transition hover:bg-white/10"
+                  >
+                    back
+                  </button>
+                )}
                 <p className="text-sm uppercase tracking-[0.35em] text-white/60">{page.section}</p>
                 <h1 className="mt-3 text-3xl font-black uppercase tracking-[0.2em] text-white">{page.title}</h1>
               </div>
@@ -178,7 +188,7 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
       {relatedPages.length > 0 && (
         <section className="rounded-[1rem] border border-black/10 bg-white/95 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
           <h2 className="text-xs font-black uppercase tracking-[0.14em] text-black">Related</h2>
-          <div className="mt-3 overflow-x-auto pb-1">
+          <div className="mt-1 overflow-x-auto px-1 py-3">
             <div className="flex w-max gap-3">
               {relatedPages.map((relatedPage) => {
                 const content = (

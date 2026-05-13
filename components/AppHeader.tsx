@@ -27,7 +27,7 @@ export default function AppHeader() {
   const pathname = usePathname()
   const router = useRouter()
   const profilePath = useSyncExternalStore(subscribeToProfilePath, getProfilePathSnapshot, () => '')
-  const showHomeLink = pathname.startsWith('/humans/user/') || pathname.startsWith('/entry/') || pathname === '/search'
+  const showHomeLink = pathname.startsWith('/humans/user/') || pathname.startsWith('/entry/') || pathname.startsWith('/once/') || pathname.startsWith('/humans/') || pathname === '/search'
   const useStackedMobileHeader = showHomeLink
 
   const handleLogout = async () => {

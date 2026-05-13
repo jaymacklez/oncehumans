@@ -35,6 +35,7 @@ type SavedChatRoom = {
 type LiveChatDrawerProps = {
   room?: LiveChatRoom
   variant?: 'inline' | 'global' | 'post'
+  label?: string
 }
 
 type ChatMessagesByRoom = Record<string, LiveChatMessage[]>
@@ -110,7 +111,7 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDrawerProps) {
+export default function LiveChatDrawer({ room, variant = 'inline', label }: LiveChatDrawerProps) {
   const [drawerId] = useState(() => createMessageId())
   const profilePath = useSyncExternalStore(subscribeToProfilePath, getProfilePathSnapshot, () => '')
   const messagesSnapshot = useSyncExternalStore(subscribeToChatStorage, getMessagesSnapshot, () => '{}')
@@ -275,7 +276,7 @@ export default function LiveChatDrawer({ room, variant = 'inline' }: LiveChatDra
             ? 'rounded-full border border-black/10 bg-slate-100 px-5 py-3 text-sm uppercase tracking-[0.2em] text-black transition hover:bg-slate-200'
           : 'rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs uppercase tracking-[0.2em] text-white transition hover:bg-white/20'}
       >
-        {variant === 'global' ? 'chats' : 'chat'}
+        {label || (variant === 'global' ? 'chats' : 'chat')}
         {totalUnreadCount > 0 && (
           <span className="ml-3 rounded-full bg-white px-2 py-1 text-xs text-slate-950">{totalUnreadCount}</span>
         )}
