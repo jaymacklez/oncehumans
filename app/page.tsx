@@ -408,51 +408,44 @@ export default function Home() {
 
             {openCategory === category.title && (
               <div className="grid max-h-[11.5rem] gap-3 overflow-y-auto overscroll-contain scroll-smooth rounded-[1.35rem] border border-black/10 bg-white/95 p-3 pr-2 shadow-[0_15px_35px_rgba(15,23,42,0.08)] [-webkit-overflow-scrolling:touch] lg:hidden">
-                {getOrderedSubcategories(category).map((subcategory) => {
-                  const subcategoryPages = openSection
-                    ? getPagesForSubcategory(openSection, category.title, subcategory.title)
-                    : []
+                {getOrderedSubcategories(category).map((subcategory) => (
+                  <button
+                    key={subcategory.title}
+                    type="button"
+                    onClick={() => {
+                      setOpenSubcategory((current) => current === subcategory.title ? '' : subcategory.title)
+                      setSelectedPageId('')
+                      setSelectedPagePlacement('rail')
+                    }}
+                    className={`w-full rounded-[1rem] border px-4 py-3 text-left transition hover:-translate-y-0.5 ${openSubcategory === subcategory.title ? 'border-black bg-black text-white' : 'border-black/10 bg-slate-50 text-black'}`}
+                  >
+                    <h3 className="break-words text-sm font-black uppercase tracking-[0.1em]">{subcategory.title}</h3>
+                  </button>
+                ))}
+              </div>
+            )}
 
-                  return (
-                    <div key={subcategory.title} className="space-y-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenSubcategory((current) => current === subcategory.title ? '' : subcategory.title)
-                          setSelectedPageId('')
-                          setSelectedPagePlacement('rail')
-                        }}
-                        className={`w-full rounded-[1rem] border px-4 py-3 text-left transition hover:-translate-y-0.5 ${openSubcategory === subcategory.title ? 'border-black bg-black text-white' : 'border-black/10 bg-slate-50 text-black'}`}
-                      >
-                        <h3 className="break-words text-sm font-black uppercase tracking-[0.1em]">{subcategory.title}</h3>
-                      </button>
-
-                      {openSubcategory === subcategory.title && (
-                        <div className="overflow-x-auto px-1 py-2">
-                          <div className="flex w-max gap-3">
-                            {subcategoryPages.map((page) => (
-                              <button
-                                key={page.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedPageId(page.id)
-                                  setSelectedPagePlacement('rail')
-                                }}
-                                className="w-36 shrink-0 overflow-hidden rounded-[0.9rem] bg-slate-950 text-left text-white shadow-[0_12px_28px_rgba(15,23,42,0.16)]"
-                              >
-                                <div className={`h-16 rounded-t-[0.9rem] bg-gradient-to-br ${category.accent} bg-cover bg-center`} />
-                                <div className="space-y-1 p-3">
-                                  <p className="truncate text-[0.55rem] font-black uppercase tracking-[0.1em] text-white/45">{page.category}</p>
-                                  <h4 className="line-clamp-2 text-xs font-black uppercase tracking-[0.08em] text-white">{page.title}</h4>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+            {openCategory === category.title && openSubcategory && (
+              <div className="overflow-x-auto rounded-[1.1rem] border border-black/10 bg-white/80 px-2 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.08)] lg:hidden">
+                <div className="flex w-max gap-2">
+                  {getPagesForSubcategory(openSection!, category.title, openSubcategory).map((page) => (
+                    <button
+                      key={page.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPageId(page.id)
+                        setSelectedPagePlacement('rail')
+                      }}
+                      className="w-28 shrink-0 overflow-hidden rounded-[0.8rem] bg-slate-950 text-left text-white shadow-[0_10px_22px_rgba(15,23,42,0.14)]"
+                    >
+                      <div className={`h-12 rounded-t-[0.8rem] bg-gradient-to-br ${category.accent} bg-cover bg-center`} />
+                      <div className="space-y-1 p-2.5">
+                        <p className="truncate text-[0.5rem] font-black uppercase tracking-[0.08em] text-white/45">{page.category}</p>
+                        <h4 className="line-clamp-2 text-[0.68rem] font-black uppercase tracking-[0.06em] text-white">{page.title}</h4>
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
