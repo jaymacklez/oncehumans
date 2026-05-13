@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Once Humans</title>
+  <rect width="512" height="512" rx="112" fill="#0f172a"/>
+  <circle cx="156" cy="184" r="54" fill="#f4ead4"/>
+  <circle cx="356" cy="184" r="54" fill="#f4ead4"/>
+  <path d="M116 338c35-56 83-84 140-84s105 28 140 84" fill="none" stroke="#f4ead4" stroke-width="34" stroke-linecap="round"/>
+  <path d="M154 184h204" fill="none" stroke="#d8c3a5" stroke-width="24" stroke-linecap="round"/>
+</svg>
