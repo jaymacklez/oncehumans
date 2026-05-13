@@ -6,6 +6,7 @@ import LiveChatDrawer, { type LiveChatRoom } from '@/components/LiveChatDrawer'
 type UploadedMedia = {
   id: string
   name: string
+  caption?: string
   type: string
   url: string
 }
@@ -86,9 +87,17 @@ export default function GalleryMediaSection({
     if (activeMediaId === mediaId) setActiveMediaId('')
   }
 
+  const updateCaption = (mediaId: string, caption: string) => {
+    setUploads((current) => current.map((upload) => (
+      upload.id === mediaId ? { ...upload, caption } : upload
+    )))
+  }
+
+  const getMediaTitle = (media: UploadedMedia) => media.caption?.trim() || media.name
+
   const activeRoom: LiveChatRoom | undefined = activeMedia ? {
     id: `gallery:${storageKey || chatHref}:${activeMedia.id}`,
-    title: activeMedia.name,
+    title: getMediaTitle(activeMedia),
     section: chatSection,
     eyebrow: chatEyebrow,
     href: chatHref,
@@ -127,6 +136,11 @@ export default function GalleryMediaSection({
                     <img src={upload.url} alt={upload.name} className="h-full w-full object-cover" />
                   )}
                 </button>
+                {upload.caption && (
+                  <p className="mt-2 max-w-24 truncate text-xs text-black/60 sm:max-w-32">
+                    {upload.caption}
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => deleteMedia(upload.id)}
@@ -147,7 +161,7 @@ export default function GalleryMediaSection({
               <div className="min-w-0">
                 <p className="text-xs uppercase tracking-[0.2em] text-black/45">{chatEyebrow}</p>
                 <h2 className="mt-2 break-words text-xl font-black uppercase tracking-[0.12em] text-black sm:text-2xl">
-                  {activeMedia.name}
+                  {getMediaTitle(activeMedia)}
                 </h2>
               </div>
               <button
@@ -167,6 +181,16 @@ export default function GalleryMediaSection({
                 <img src={activeMedia.url} alt={activeMedia.name} className="max-h-[70vh] w-full object-contain" />
               )}
             </div>
+
+            <label className="mt-5 block space-y-2 text-sm font-semibold uppercase tracking-[0.18em] text-black">
+              Caption
+              <input
+                value={activeMedia.caption || ''}
+                onChange={(event) => updateCaption(activeMedia.id, event.target.value)}
+                className="w-full rounded-2xl border border-black/10 bg-slate-50 px-4 py-3 text-sm normal-case tracking-normal text-black outline-none focus:border-black/25"
+                placeholder="Give this image or video a caption"
+              />
+            </label>
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <button

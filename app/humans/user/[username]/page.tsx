@@ -67,6 +67,29 @@ function readLocalStorage<T>(key: string, fallback: T): T {
   }
 }
 
+function formatPostDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    const fallbackDate = new Date(`${value}T00:00:00`)
+    if (Number.isNaN(fallbackDate.getTime())) return value
+
+    return fallbackDate.toLocaleDateString([], {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
+
+  return `${date.toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+  })} ${date.toLocaleDateString([], {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })}`
+}
+
 export default function HumanUserPage() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -213,13 +236,17 @@ export default function HumanUserPage() {
     setPosts((current) => [
       {
         id: `${Date.now()}`,
-        date: new Date().toISOString().slice(0, 10),
+        date: new Date().toISOString(),
         body: postBody.trim(),
         comments: [],
       },
       ...current,
     ])
     setPostBody('')
+  }
+
+  const deletePost = (postId: string) => {
+    setPosts((current) => current.filter((post) => post.id !== postId))
   }
 
   return (
@@ -347,10 +374,17 @@ export default function HumanUserPage() {
               <article key={post.id} className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
                 <div>
                   <p className="text-sm uppercase tracking-[0.35em] text-black/50">posted</p>
-                  <h3 className="text-2xl font-black uppercase tracking-[0.15em] text-black">{post.date}</h3>
+                  <h3 className="text-2xl font-black uppercase tracking-[0.15em] text-black">{formatPostDate(post.date)}</h3>
                 </div>
                 <p className="mt-6 text-sm leading-7 text-black/80">{post.body}</p>
-                <div className="mt-6 flex justify-end">
+                <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => deletePost(post.id)}
+                    className="rounded-full border border-black/10 bg-white px-5 py-3 text-sm uppercase tracking-[0.2em] text-black transition hover:bg-slate-100"
+                  >
+                    delete
+                  </button>
                   <LiveChatDrawer
                     variant="post"
                     room={{
