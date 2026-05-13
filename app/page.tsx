@@ -74,25 +74,6 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
         chatEyebrow={`gallery from ${page.title}`}
       />
 
-      {relatedPages.length > 0 && (
-        <section className="rounded-[1.25rem] border border-black/10 bg-slate-50 p-4 sm:rounded-[1.5rem] sm:p-5">
-          <h3 className="text-sm font-black uppercase tracking-[0.16em] text-black sm:tracking-[0.25em]">Related</h3>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {relatedPages.map((relatedPage) => (
-              <button
-                key={relatedPage.id}
-                type="button"
-                onClick={() => onSelectRelated(relatedPage)}
-                className="rounded-[1.1rem] bg-slate-950 p-4 text-left text-white transition hover:-translate-y-0.5 hover:bg-black"
-              >
-                <p className="break-words text-[0.65rem] uppercase tracking-[0.14em] text-white/50 sm:tracking-[0.22em]">{relatedPage.subcategory}</p>
-                <h4 className="mt-2 break-words text-sm font-black uppercase tracking-[0.08em] sm:tracking-[0.14em]">{relatedPage.title}</h4>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
       <section className="rounded-[1.25rem] border border-black/10 bg-slate-50 p-4 sm:rounded-[1.5rem] sm:p-5">
         <h3 className="text-sm font-black uppercase tracking-[0.16em] text-black sm:tracking-[0.25em]">Posts</h3>
         <textarea
@@ -123,6 +104,27 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
           )}
         </div>
       </section>
+
+      {relatedPages.length > 0 && (
+        <section className="rounded-[1rem] border border-black/10 bg-slate-50 p-3">
+          <h3 className="text-xs font-black uppercase tracking-[0.14em] text-black">Related</h3>
+          <div className="mt-3 overflow-x-auto pb-1">
+            <div className="flex w-max gap-2">
+              {relatedPages.map((relatedPage) => (
+                <button
+                  key={relatedPage.id}
+                  type="button"
+                  onClick={() => onSelectRelated(relatedPage)}
+                  className="w-36 rounded-[0.9rem] bg-slate-950 p-3 text-left text-white transition hover:-translate-y-0.5 hover:bg-black"
+                >
+                  <p className="truncate text-[0.6rem] uppercase tracking-[0.12em] text-white/50">{relatedPage.subcategory}</p>
+                  <h4 className="mt-1 truncate text-xs font-black uppercase tracking-[0.08em]">{relatedPage.title}</h4>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </article>
   )
 }
@@ -239,8 +241,8 @@ export default function Home() {
           </button>
 
           {openCategory === category.title && (
-            <div className="grid gap-3 rounded-[1.35rem] border border-black/10 bg-white/95 p-3 shadow-[0_15px_35px_rgba(15,23,42,0.08)]">
-              {getOrderedSubcategories(category).slice(0, 3).map((subcategory) => {
+            <div className="grid max-h-[15.75rem] gap-3 overflow-y-auto overscroll-contain scroll-smooth rounded-[1.35rem] border border-black/10 bg-white/95 p-3 pr-2 shadow-[0_15px_35px_rgba(15,23,42,0.08)] [-webkit-overflow-scrolling:touch] lg:max-h-none lg:overflow-visible lg:pr-3">
+              {(useDesktopCategoryOrder ? getOrderedSubcategories(category).slice(0, 3) : getOrderedSubcategories(category)).map((subcategory) => {
                 const subcategoryPages = openSection
                   ? getPagesForSubcategory(openSection, category.title, subcategory.title)
                   : []
@@ -351,14 +353,14 @@ export default function Home() {
           <button
             type="button"
             onClick={() => chooseSection('once')}
-            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-2 py-3 text-center text-[clamp(1.45rem,9.5vw,4.25rem)] font-black uppercase leading-none tracking-[0.01em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-4 sm:py-5 sm:text-[clamp(3.1rem,6.4vw,5.4rem)] sm:tracking-[0.02em] lg:px-5 lg:py-6 lg:text-[clamp(4rem,6.1vw,6rem)]"
+            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-1.5 py-3 text-center text-[clamp(1.35rem,8.8vw,4.25rem)] font-black uppercase leading-none tracking-[0.01em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-4 sm:py-5 sm:text-[clamp(3.1rem,6.4vw,5.4rem)] sm:tracking-[0.02em] lg:px-5 lg:py-6 lg:text-[clamp(4rem,6.1vw,6rem)]"
           >
             once
           </button>
           <button
             type="button"
             onClick={() => chooseSection('humans')}
-            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-2 py-3 text-center text-[clamp(1.45rem,9.5vw,4.25rem)] font-black uppercase leading-none tracking-[0.01em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-4 sm:py-5 sm:text-[clamp(3.1rem,6.4vw,5.4rem)] sm:tracking-[0.02em] lg:px-5 lg:py-6 lg:text-[clamp(4rem,6.1vw,6rem)]"
+            className="min-w-0 flex-1 overflow-hidden rounded-[1.25rem] border border-black/20 bg-[#d8c3a5] px-1.5 py-3 text-center text-[clamp(1.35rem,8.8vw,4.25rem)] font-black uppercase leading-none tracking-[0.01em] text-black transition duration-200 hover:bg-[#d2b18c] sm:px-4 sm:py-5 sm:text-[clamp(3.1rem,6.4vw,5.4rem)] sm:tracking-[0.02em] lg:px-5 lg:py-6 lg:text-[clamp(4rem,6.1vw,6rem)]"
           >
             humans
           </button>

@@ -87,47 +87,6 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
         chatEyebrow={`gallery from ${page.title}`}
       />
 
-      {relatedPages.length > 0 && (
-        <section className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
-          <h2 className="text-3xl font-black uppercase tracking-[0.2em] text-black">Related</h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {relatedPages.map((relatedPage) => {
-              const content = (
-                <>
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/55">
-                    {relatedPage.section} / {relatedPage.subcategory}
-                  </p>
-                  <h3 className="mt-3 text-xl font-black uppercase tracking-[0.15em]">{relatedPage.title}</h3>
-                </>
-              )
-
-              if (relatedMode === 'link') {
-                return (
-                  <Link
-                    key={relatedPage.id}
-                    href={`/entry/${relatedPage.id}`}
-                    className="rounded-[1.75rem] border border-black/10 bg-slate-950 p-5 text-left text-white transition hover:-translate-y-0.5 hover:bg-black"
-                  >
-                    {content}
-                  </Link>
-                )
-              }
-
-              return (
-                <button
-                  key={relatedPage.id}
-                  type="button"
-                  onClick={() => onSelectRelated?.(relatedPage)}
-                  className="rounded-[1.75rem] border border-black/10 bg-slate-950 p-5 text-left text-white transition hover:-translate-y-0.5 hover:bg-black"
-                >
-                  {content}
-                </button>
-              )
-            })}
-          </div>
-        </section>
-      )}
-
       <section className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
         <h2 className="mb-6 text-3xl font-black uppercase tracking-[0.2em] text-black">Posts</h2>
         <textarea
@@ -177,6 +136,49 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
           ))
         )}
       </section>
+
+      {relatedPages.length > 0 && (
+        <section className="rounded-[1rem] border border-black/10 bg-white/95 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)]">
+          <h2 className="text-xs font-black uppercase tracking-[0.14em] text-black">Related</h2>
+          <div className="mt-3 overflow-x-auto pb-1">
+            <div className="flex w-max gap-2">
+              {relatedPages.map((relatedPage) => {
+                const content = (
+                  <>
+                    <p className="truncate text-[0.6rem] uppercase tracking-[0.16em] text-white/55">
+                      {relatedPage.section} / {relatedPage.subcategory}
+                    </p>
+                    <h3 className="mt-1 truncate text-xs font-black uppercase tracking-[0.1em] text-white">
+                      {relatedPage.title}
+                    </h3>
+                  </>
+                )
+                const className =
+                  'w-40 rounded-[0.9rem] border border-black/10 bg-slate-950 p-3 text-left text-white transition hover:-translate-y-0.5 hover:bg-black'
+
+                if (relatedMode === 'link') {
+                  return (
+                    <Link key={relatedPage.id} href={`/entry/${relatedPage.id}`} className={className}>
+                      {content}
+                    </Link>
+                  )
+                }
+
+                return (
+                  <button
+                    key={relatedPage.id}
+                    type="button"
+                    onClick={() => onSelectRelated?.(relatedPage)}
+                    className={className}
+                  >
+                    {content}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

@@ -9,7 +9,17 @@ function slugifyName(value: string) {
 }
 
 function getTypeLabel(type: string) {
-  return type === 'human' ? 'Human' : type
+  const labels: Record<string, string> = {
+    Creators: 'Creator',
+    Artists: 'Artist',
+    Engineers: 'Engineer',
+    Scientists: 'Scientist',
+    Writers: 'Writer',
+    Performers: 'Performer',
+    human: 'Just a Human',
+  }
+
+  return labels[type] || type
 }
 
 export default function Signup() {
@@ -24,13 +34,13 @@ export default function Signup() {
   const supabase = createClient()
 
   const categoryOptions = [
-    'human',
     'Creators',
     'Artists',
     'Engineers',
     'Scientists',
     'Writers',
     'Performers',
+    'human',
   ]
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -145,7 +155,7 @@ export default function Signup() {
         ) : (
           <div className="space-y-6">
             <div>
-              <p className="text-sm uppercase tracking-[0.25em] text-gray-500">what type of human are you?</p>
+              <p className="whitespace-nowrap text-[0.68rem] uppercase tracking-[0.08em] text-gray-500 sm:text-sm sm:tracking-[0.25em]">what type of human are you?</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {categoryOptions.map((type) => (
