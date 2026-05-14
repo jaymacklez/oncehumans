@@ -1,6 +1,7 @@
 'use client'
 
 import { type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { createPortal } from 'react-dom'
 
 export type LiveChatSide = 'left' | 'right'
 
@@ -365,6 +366,29 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
 
   const topLevelMessages = sortedMessages.filter((message) => !message.parentId)
 
+  const renderTabSwitcher = () => (
+    <div className="relative mt-4 grid h-11 w-full grid-cols-2 overflow-hidden rounded-full border border-white/10 bg-white/5 p-1">
+      <span
+        aria-hidden="true"
+        className={`absolute bottom-1 left-1 top-1 w-[calc(50%-0.25rem)] rounded-full bg-white shadow-[0_8px_20px_rgba(255,255,255,0.08)] transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
+          activeTab === 'saved' ? 'translate-x-full' : 'translate-x-0'
+        }`}
+      />
+      {(['current', 'saved'] as const).map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          onClick={() => setActiveTab(tab)}
+          className={`relative z-10 flex h-full min-w-0 items-center justify-center rounded-full px-3 text-center text-xs font-semibold uppercase tracking-[0.12em] transition-colors duration-200 sm:px-4 sm:tracking-[0.18em] ${
+            activeTab === tab ? 'text-slate-950' : 'text-white/65 hover:text-white'
+          }`}
+        >
+          {tab === 'saved' ? 'chats' : tab}
+        </button>
+      ))}
+    </div>
+  )
+
   const renderMessageThread = (message: LiveChatMessage, depth = 0) => {
     const replies = sortedMessages.filter((reply) => reply.parentId === message.id)
 
@@ -418,10 +442,10 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
 
   const chatPanel = (embedded = false) => (
     <div className={embedded ? 'flex h-[30rem] max-h-[70dvh] min-h-[24rem] flex-col overflow-hidden' : 'contents'}>
-      <div className={embedded ? 'border-b border-white/10 pb-4' : 'relative border-b border-white/10 p-4 pr-28 sm:p-5 sm:pr-32'}>
+      <div className={embedded ? 'border-b border-white/10 pb-4' : 'relative border-b border-white/10 p-4 sm:p-5'}>
         {embedded ? (
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="min-w-0 break-words text-xl font-black uppercase tracking-[0.1em] sm:text-2xl sm:tracking-[0.18em]">{visibleRoom.title}</h2>
+          <div className="flex min-w-0 items-center gap-3">
+            <h2 className="max-w-[calc(100%-7rem)] truncate whitespace-nowrap text-xl font-black uppercase tracking-[0.1em] sm:text-2xl sm:tracking-[0.18em]">{visibleRoom.title}</h2>
             <button
               type="button"
               onClick={toggleSavedRoom}
@@ -439,37 +463,56 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
             >
               close
             </button>
-            <p className="min-w-0 break-words text-xs uppercase tracking-[0.18em] text-white/50 sm:tracking-[0.3em]">{visibleRoom.eyebrow || visibleRoom.section}</p>
-            <h2 className="mt-2 min-w-0 break-words text-xl font-black uppercase tracking-[0.1em] sm:text-2xl sm:tracking-[0.18em]">{visibleRoom.title}</h2>
-            <button
-              type="button"
-              onClick={toggleSavedRoom}
-              className={`mt-4 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${savedCurrentRoom ? 'bg-white text-slate-950' : 'border border-white/15 text-white hover:bg-white/10'}`}
-            >
-              {savedCurrentRoom ? 'joined' : 'join chat'}
-            </button>
+            <div className="pr-24 sm:pr-28">
+              <div className="flex min-w-0 items-center">
+                <button
+                  type="button"
+                  onClick={toggleSavedRoom}
+                  className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${savedCurrentRoom ? 'bg-white text-slate-950' : 'border border-white/15 text-white hover:bg-white/10'}`}
+                >
+                  {savedCurrentRoom ? 'joined' : 'join chat'}
+                </button>
+              </div>
+              <h2 className="mt-2 min-w-0 truncate whitespace-nowrap text-xl font-black uppercase tracking-[0.1em] sm:text-2xl sm:tracking-[0.18em]">{visibleRoom.title}</h2>
+            </div>
           </>
         )}
 
         {!embedded && (
-          <div className="mt-3 grid grid-cols-2 gap-2 rounded-full border border-white/10 bg-white/5 p-1">
-            {(['current', 'saved'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${activeTab === tab ? 'bg-white text-slate-950' : 'text-white/65 hover:bg-white/10'}`}
-              >
-                {tab === 'saved' ? 'chats' : tab}
-              </button>
-            ))}
-          </div>
+          renderTabSwitcher()
         )}
       </div>
 
       <div className={embedded ? 'min-h-0 flex-1 space-y-1 overflow-y-auto py-3 pr-1' : 'min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5'}>
-        {topLevelMessages.length === 0 ? (
-          <div className="py-6 text-sm leading-6 text-white/60">
+        {!embedded && activeTab === 'saved' ? (
+          savedRooms.length === 0 ? (
+            <div className="flex min-h-40 items-center justify-center rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-center text-sm leading-6 text-white/60">
+              Joined chats will appear here.
+            </div>
+          ) : (
+            savedRooms.map((savedRoom) => (
+              <button
+                key={savedRoom.roomId}
+                type="button"
+                onClick={() => openSavedRoom(savedRoom)}
+                className="w-full rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.25em] text-white/45">{savedRoom.eyebrow || savedRoom.section}</p>
+                    <h3 className="mt-2 text-base font-black uppercase tracking-[0.15em] text-white">{savedRoom.title}</h3>
+                  </div>
+                  {savedRoom.unreadCount > 0 && (
+                    <span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-950">
+                      {savedRoom.unreadCount}
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))
+          )
+        ) : topLevelMessages.length === 0 ? (
+          <div className="flex min-h-40 items-center justify-center px-4 py-6 text-center text-sm leading-6 text-white/60">
             No chat yet. Start the room.
           </div>
         ) : (
@@ -477,6 +520,7 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
         )}
       </div>
 
+      {(embedded || activeTab === 'current') && (
       <div className={embedded ? 'mt-auto border-t border-white/10 pt-4' : 'border-t border-white/10 p-4 sm:p-5'}>
         {replyingTo && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/60">
@@ -520,6 +564,7 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
           </div>
         )}
       </div>
+      )}
     </div>
   )
 
@@ -556,73 +601,21 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
       </button>
 
       <ChatDrawerShell open={open}>
-        {activeTab === 'current' ? (
-          chatPanel(false)
-        ) : (
-          <>
-            <div className="relative border-b border-white/10 p-4 pr-28 sm:p-5 sm:pr-32">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="absolute right-4 top-4 rounded-full border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em] text-white/75 transition hover:bg-white/10 sm:right-5 sm:top-5"
-              >
-                close
-              </button>
-              <h2 className="min-w-0 break-words text-xl font-black uppercase tracking-[0.1em] sm:text-2xl sm:tracking-[0.18em]">Chats</h2>
-              <div className="mt-3 grid grid-cols-2 gap-2 rounded-full border border-white/10 bg-white/5 p-1">
-                {(['current', 'saved'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActiveTab(tab)}
-                    className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${activeTab === tab ? 'bg-white text-slate-950' : 'text-white/65 hover:bg-white/10'}`}
-                  >
-                    {tab === 'saved' ? 'chats' : tab}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
-              {savedRooms.length === 0 ? (
-                <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-sm leading-6 text-white/60">
-                  Joined chats will appear here.
-                </div>
-              ) : (
-                savedRooms.map((savedRoom) => (
-                  <button
-                    key={savedRoom.roomId}
-                    type="button"
-                    onClick={() => openSavedRoom(savedRoom)}
-                    className="w-full rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.25em] text-white/45">{savedRoom.eyebrow || savedRoom.section}</p>
-                        <h3 className="mt-2 text-base font-black uppercase tracking-[0.15em] text-white">{savedRoom.title}</h3>
-                      </div>
-                      {savedRoom.unreadCount > 0 && (
-                        <span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-950">
-                          {savedRoom.unreadCount}
-                        </span>
-                      )}
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </>
-        )}
+        {chatPanel(false)}
       </ChatDrawerShell>
     </>
   )
 }
 
 function ChatDrawerShell({ children, open }: { children: ReactNode; open: boolean }) {
-  return (
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
     <aside
-      className={`fixed inset-x-3 bottom-3 z-50 flex h-[min(36rem,calc(100dvh-1.5rem))] w-auto origin-bottom-right flex-col overflow-hidden rounded-[1.25rem] border border-black/10 bg-slate-950 text-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out sm:inset-x-auto sm:bottom-6 sm:right-6 sm:h-[min(38rem,calc(100dvh-3rem))] sm:w-[min(24rem,calc(100vw-3rem))] sm:rounded-[1.5rem] ${open ? 'translate-y-0 scale-100 opacity-100' : 'pointer-events-none translate-y-6 scale-90 opacity-0'}`}
+      className={`fixed left-3 right-3 bottom-3 z-[100] mx-auto flex h-[min(34rem,calc(100dvh-1.5rem))] max-w-[calc(100vw-1.5rem)] origin-bottom flex-col overflow-hidden rounded-[1.25rem] border border-black/10 bg-slate-950 text-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out sm:left-auto sm:right-6 sm:bottom-6 sm:mx-0 sm:h-[min(38rem,calc(100dvh-3rem))] sm:w-[min(24rem,calc(100vw-3rem))] sm:origin-bottom-right sm:rounded-[1.5rem] ${open ? 'translate-y-0 scale-100 opacity-100' : 'pointer-events-none translate-y-8 scale-95 opacity-0'}`}
     >
       {children}
-    </aside>
+    </aside>,
+    document.body
   )
 }
