@@ -3,6 +3,12 @@
 import { useState } from 'react'
 import { createClient } from '../../../lib/supabase-browser'
 import { useRouter } from 'next/navigation'
+import {
+  getDefaultHumanSubcategory,
+  getStoredHumanProfile,
+  normalizeHumanCategory,
+  upsertHumanProfile,
+} from '@/lib/human-profiles'
 
 function slugifyName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, '-') || 'human'
@@ -16,14 +22,25 @@ export default function Login() {
   const router = useRouter()
   const supabase = createClient()
 
-  const openProfile = (nameSource: string, type = 'human') => {
-    const username = slugifyName(nameSource || email.split('@')[0] || 'human')
-    const savedType = localStorage.getItem(`once-humans-profile-type:${username}`) || type
-    const profilePath = `/humans/user/${username}?type=${encodeURIComponent(savedType)}`
-    localStorage.setItem('once-humans-profile-path', profilePath)
-    window.dispatchEvent(new Event('once-humans-profile-changed'))
+  const openProfile = (usernameSource: string, type = 'human', displayNameSource = '') => {
+    const username = slugifyName(usernameSource || email.split('@')[0] || 'human')
+    const savedProfile = getStoredHumanProfile(username)
+    const savedType = savedProfile?.type || localStorage.getItem(`once-humans-profile-type:${username}`) || type
+    const category = savedProfile?.category || normalizeHumanCategory(localStorage.getItem(`once-humans-profile-category:${username}`) || savedType)
+    const subcategory = savedProfile?.subcategory || localStorage.getItem(`once-humans-profile-subcategory:${username}`) || getDefaultHumanSubcategory(category)
+    const profilePath = `/humans/user/${username}?type=${encodeURIComponent(category)}`
+    upsertHumanProfile({
+      username,
+      displayName: savedProfile?.displayName || dataSafeDisplayName(displayNameSource || usernameSource),
+      category,
+      subcategory,
+      type: category,
+      profilePath,
+    })
     router.push(profilePath)
   }
+
+  const dataSafeDisplayName = (value: string) => value.trim() || email.split('@')[0] || 'human'
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,7 +53,11 @@ export default function Login() {
     if (error) {
       setAuthMessage(error.message)
     } else if (data.user) {
-      openProfile(data.user.user_metadata?.name || data.user.email || email)
+      openProfile(
+        data.user.user_metadata?.username || data.user.email || email,
+        'human',
+        data.user.user_metadata?.name || data.user.email || email,
+      )
     }
     setLoading(false)
   }

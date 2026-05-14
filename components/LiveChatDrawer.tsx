@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 
 export type LiveChatSide = 'left' | 'right'
 
@@ -19,6 +19,9 @@ type LiveChatMessage = {
   author: string
   body: string
   createdAt: string
+  parentId?: string
+  score?: number
+  userVote?: 'like' | 'dislike'
 }
 
 type SavedChatRoom = {
@@ -34,7 +37,7 @@ type SavedChatRoom = {
 
 type LiveChatDrawerProps = {
   room?: LiveChatRoom
-  variant?: 'inline' | 'global' | 'post'
+  variant?: 'inline' | 'global' | 'post' | 'embedded'
   label?: string
 }
 
@@ -111,6 +114,24 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
+function ThumbIcon({ filled, direction }: { filled: boolean; direction: 'up' | 'down' }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className={`h-4 w-4 ${direction === 'down' ? 'rotate-180' : ''}`}
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+    >
+      <path d="M7 21H4.8a1.8 1.8 0 0 1-1.8-1.8v-7.4A1.8 1.8 0 0 1 4.8 10H7v11Z" />
+      <path d="M7 10l3.6-6.1a2 2 0 0 1 3.7 1.2L14 9h4.8a2.2 2.2 0 0 1 2.1 2.7l-1.6 6.8A3.2 3.2 0 0 1 16.2 21H7V10Z" />
+    </svg>
+  )
+}
+
 export default function LiveChatDrawer({ room, variant = 'inline', label }: LiveChatDrawerProps) {
   const [drawerId] = useState(() => createMessageId())
   const profilePath = useSyncExternalStore(subscribeToProfilePath, getProfilePathSnapshot, () => '')
@@ -129,6 +150,9 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
   const [activeTab, setActiveTab] = useState<'current' | 'saved'>('current')
   const [activeRoom, setActiveRoom] = useState<LiveChatRoom>(currentRoom)
   const [messageBody, setMessageBody] = useState('')
+  const [replyingTo, setReplyingTo] = useState<LiveChatMessage | null>(null)
+  const composerRef = useRef<HTMLInputElement | null>(null)
+  const visibleRoom = variant === 'embedded' ? currentRoom : activeRoom
 
   const messagesByUser = useMemo(() => {
     try {
@@ -155,8 +179,8 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
 
     return Array.from(roomsById.values())
   }, [legacyUserChatKey, savedRoomsByUser, userChatKey])
-  const messages = messagesByRoom[activeRoom.id] || []
-  const savedCurrentRoom = savedRooms.some((savedRoom) => savedRoom.roomId === activeRoom.id)
+  const messages = useMemo(() => messagesByRoom[visibleRoom.id] || [], [messagesByRoom, visibleRoom.id])
+  const savedCurrentRoom = savedRooms.some((savedRoom) => savedRoom.roomId === visibleRoom.id)
   const totalUnreadCount = useMemo(
     () => savedRooms.reduce((total, savedRoom) => total + savedRoom.unreadCount, 0),
     [savedRooms]
@@ -176,6 +200,21 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
       window.removeEventListener(chatDrawerOpenedEvent, closeWhenAnotherDrawerOpens)
     }
   }, [drawerId])
+
+  useEffect(() => {
+    const closeAfterPageRestore = () => setOpen(false)
+
+    window.addEventListener('pageshow', closeAfterPageRestore)
+
+    return () => {
+      window.removeEventListener('pageshow', closeAfterPageRestore)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!replyingTo) return
+    composerRef.current?.focus()
+  }, [replyingTo])
 
   const persistMessages = (nextMessagesByRoom: ChatMessagesByRoom) => {
     const nextMessagesByUser = {
@@ -202,18 +241,48 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
 
     const nextMessage: LiveChatMessage = {
       id: createMessageId(),
-      roomId: activeRoom.id,
+      roomId: visibleRoom.id,
       author: 'you',
       body: messageBody.trim(),
       createdAt: new Date().toISOString(),
+      parentId: replyingTo?.id,
+      score: 0,
     }
     const nextMessagesByRoom = {
       ...messagesByRoom,
-      [activeRoom.id]: [...messages, nextMessage],
+      [visibleRoom.id]: [...messages, nextMessage],
     }
 
     persistMessages(nextMessagesByRoom)
     setMessageBody('')
+    setReplyingTo(null)
+  }
+
+  const voteMessage = (messageId: string, vote: 'like' | 'dislike') => {
+    if (!signedIn) {
+      redirectToAuth()
+      return
+    }
+
+    const nextMessagesByRoom = {
+      ...messagesByRoom,
+      [visibleRoom.id]: messages.map((message) => {
+        if (message.id !== messageId) return message
+
+        const previousVote = message.userVote
+        const nextVote = previousVote === vote ? undefined : vote
+        const previousScore = previousVote === 'like' ? 1 : previousVote === 'dislike' ? -1 : 0
+        const nextScore = nextVote === 'like' ? 1 : nextVote === 'dislike' ? -1 : 0
+
+        return {
+          ...message,
+          userVote: nextVote,
+          score: (message.score || 0) - previousScore + nextScore,
+        }
+      }),
+    }
+
+    persistMessages(nextMessagesByRoom)
   }
 
   const toggleSavedRoom = () => {
@@ -223,17 +292,17 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
     }
 
     if (savedCurrentRoom) {
-      persistSavedRooms(savedRooms.filter((savedRoom) => savedRoom.roomId !== activeRoom.id))
+      persistSavedRooms(savedRooms.filter((savedRoom) => savedRoom.roomId !== visibleRoom.id))
       return
     }
 
     persistSavedRooms([
       {
-        roomId: activeRoom.id,
-        title: activeRoom.title,
-        section: activeRoom.section,
-        eyebrow: activeRoom.eyebrow,
-        href: activeRoom.href,
+        roomId: visibleRoom.id,
+        title: visibleRoom.title,
+        section: visibleRoom.section,
+        eyebrow: visibleRoom.eyebrow,
+        href: visibleRoom.href,
         savedAt: new Date().toISOString(),
         unreadCount: 0,
       },
@@ -253,6 +322,169 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
     persistSavedRooms(savedRooms.map((roomToSave) => (
       roomToSave.roomId === savedRoom.roomId ? { ...roomToSave, unreadCount: 0 } : roomToSave
     )))
+  }
+
+  const sortedMessages = useMemo(() => {
+    return [...messages].sort((firstMessage, secondMessage) => {
+      const scoreDifference = (secondMessage.score || 0) - (firstMessage.score || 0)
+      if (scoreDifference !== 0) return scoreDifference
+
+      return new Date(secondMessage.createdAt).getTime() - new Date(firstMessage.createdAt).getTime()
+    })
+  }, [messages])
+
+  const topLevelMessages = sortedMessages.filter((message) => !message.parentId)
+
+  const renderMessageThread = (message: LiveChatMessage, depth = 0) => {
+    const replies = sortedMessages.filter((reply) => reply.parentId === message.id)
+
+    return (
+      <div key={message.id} className={depth > 0 ? 'ml-4 border-l border-white/15 pl-3 sm:ml-6 sm:pl-4' : ''}>
+        <article className="border-b border-white/10 py-3 last:border-b-0">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-white/50">{message.author}</p>
+            <p className="text-[0.62rem] uppercase tracking-[0.14em] text-white/35">
+              {new Date(message.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+            </p>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-white/88">{message.body}</p>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setReplyingTo(message)
+                requestAnimationFrame(() => composerRef.current?.focus())
+              }}
+              className="px-1 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white/55 transition hover:text-white"
+            >
+              reply
+            </button>
+            <button
+              type="button"
+              onClick={() => voteMessage(message.id, 'like')}
+              aria-label="Like"
+              className={`px-2 py-1 transition hover:text-white ${message.userVote === 'like' ? 'text-white' : 'text-white/55'}`}
+            >
+              <ThumbIcon filled={message.userVote === 'like'} direction="up" />
+            </button>
+            <button
+              type="button"
+              onClick={() => voteMessage(message.id, 'dislike')}
+              aria-label="Dislike"
+              className={`px-2 py-1 transition hover:text-white ${message.userVote === 'dislike' ? 'text-white' : 'text-white/55'}`}
+            >
+              <ThumbIcon filled={message.userVote === 'dislike'} direction="down" />
+            </button>
+          </div>
+        </article>
+        {replies.length > 0 && (
+          <div className="mt-3 space-y-3">
+            {replies.map((reply) => renderMessageThread(reply, depth + 1))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const chatPanel = (embedded = false) => (
+    <div className={embedded ? 'flex min-h-[28rem] flex-col overflow-hidden' : 'contents'}>
+      <div className={embedded ? 'border-b border-white/10 pb-4' : 'relative border-b border-white/10 p-4 pr-28 sm:p-5 sm:pr-32'}>
+        {embedded ? (
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="min-w-0 break-words text-xl font-black uppercase tracking-[0.1em] sm:text-2xl sm:tracking-[0.18em]">{visibleRoom.title}</h2>
+            <button
+              type="button"
+              onClick={toggleSavedRoom}
+              className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${savedCurrentRoom ? 'bg-white text-slate-950' : 'border border-white/15 text-white hover:bg-white/10'}`}
+            >
+              join chat
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="absolute right-4 top-4 rounded-full border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em] text-white/75 transition hover:bg-white/10 sm:right-5 sm:top-5"
+            >
+              close
+            </button>
+            <p className="min-w-0 break-words text-xs uppercase tracking-[0.18em] text-white/50 sm:tracking-[0.3em]">{visibleRoom.eyebrow || visibleRoom.section}</p>
+            <h2 className="mt-2 min-w-0 break-words text-xl font-black uppercase tracking-[0.1em] sm:text-2xl sm:tracking-[0.18em]">{visibleRoom.title}</h2>
+            <button
+              type="button"
+              onClick={toggleSavedRoom}
+              className={`mt-4 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${savedCurrentRoom ? 'bg-white text-slate-950' : 'border border-white/15 text-white hover:bg-white/10'}`}
+            >
+              {savedCurrentRoom ? 'joined' : 'join chat'}
+            </button>
+          </>
+        )}
+
+        {!embedded && (
+          <div className="mt-3 grid grid-cols-2 gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+            {(['current', 'saved'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${activeTab === tab ? 'bg-white text-slate-950' : 'text-white/65 hover:bg-white/10'}`}
+              >
+                {tab === 'saved' ? 'chats' : tab}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className={embedded ? 'min-h-0 flex-1 space-y-1 overflow-y-auto py-3 pr-1' : 'min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5'}>
+        {topLevelMessages.length === 0 ? (
+          <div className="py-6 text-sm leading-6 text-white/60">
+            No chat yet. Start the room.
+          </div>
+        ) : (
+          topLevelMessages.map((message) => renderMessageThread(message))
+        )}
+      </div>
+
+      <div className={embedded ? 'border-t border-white/10 pt-4' : 'border-t border-white/10 p-4 sm:p-5'}>
+        {replyingTo && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/60">
+            <span className="min-w-0 truncate">Replying to {replyingTo.author}: {replyingTo.body}</span>
+            <button
+              type="button"
+              onClick={() => setReplyingTo(null)}
+              className="shrink-0 font-black uppercase tracking-[0.12em] text-white/70 hover:text-white"
+            >
+              clear
+            </button>
+          </div>
+        )}
+        <div className="flex gap-3">
+          <input
+            ref={composerRef}
+            value={messageBody}
+            onChange={(event) => setMessageBody(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') addMessage()
+            }}
+            className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none placeholder:text-white/45"
+            placeholder="Say something"
+          />
+          <button
+            type="button"
+            onClick={addMessage}
+            className="rounded-2xl bg-white px-3 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-slate-950 sm:px-4 sm:tracking-[0.18em]"
+          >
+            send
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+
+  if (variant === 'embedded') {
+    return chatPanel(true)
   }
 
   return (
@@ -276,7 +508,7 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
             ? 'rounded-full border border-black/10 bg-slate-100 px-5 py-3 text-sm uppercase tracking-[0.2em] text-black transition hover:bg-slate-200'
           : 'rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs uppercase tracking-[0.2em] text-white transition hover:bg-white/20'}
       >
-        {label || (variant === 'global' ? 'chats' : 'chat')}
+        {label || (variant === 'global' ? 'chats' : 'join chat')}
         {totalUnreadCount > 0 && (
           <span className="ml-3 rounded-full bg-white px-2 py-1 text-xs text-slate-950">{totalUnreadCount}</span>
         )}
@@ -285,113 +517,61 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
       <aside
         className={`fixed inset-x-3 bottom-3 z-50 flex h-[min(36rem,calc(100dvh-1.5rem))] w-auto origin-bottom-right flex-col overflow-hidden rounded-[1.25rem] border border-black/10 bg-slate-950 text-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] transition duration-200 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:h-[min(38rem,calc(100dvh-3rem))] sm:w-[min(24rem,calc(100vw-3rem))] sm:rounded-[1.5rem] ${open ? 'translate-y-0 scale-100 opacity-100' : 'pointer-events-none translate-y-4 scale-95 opacity-0'}`}
       >
-        <div className="border-b border-white/10 p-4 sm:p-5">
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2">
-            <p className="min-w-0 break-words text-xs uppercase tracking-[0.18em] text-white/50 sm:tracking-[0.3em]">{activeRoom.eyebrow || activeRoom.section}</p>
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="justify-self-end rounded-full border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em] text-white/75 transition hover:bg-white/10"
-            >
-              close
-            </button>
-
-            <h2 className="min-w-0 break-words text-xl font-black uppercase tracking-[0.1em] sm:text-2xl sm:tracking-[0.18em]">{activeRoom.title}</h2>
-            <button
-              type="button"
-              onClick={toggleSavedRoom}
-              className={`justify-self-end rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${savedCurrentRoom ? 'bg-white text-slate-950' : 'border border-white/15 text-white hover:bg-white/10'}`}
-            >
-              {savedCurrentRoom ? 'joined' : 'join chat'}
-            </button>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-2 rounded-full border border-white/10 bg-white/5 p-1">
-            {(['current', 'saved'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${activeTab === tab ? 'bg-white text-slate-950' : 'text-white/65 hover:bg-white/10'}`}
-              >
-                {tab === 'saved' ? 'chats' : tab}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {activeTab === 'current' ? (
+          chatPanel(false)
+        ) : (
           <>
+            <div className="relative border-b border-white/10 p-4 pr-28 sm:p-5 sm:pr-32">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="absolute right-4 top-4 rounded-full border border-white/15 px-3 py-2 text-xs uppercase tracking-[0.18em] text-white/75 transition hover:bg-white/10 sm:right-5 sm:top-5"
+              >
+                close
+              </button>
+              <h2 className="min-w-0 break-words text-xl font-black uppercase tracking-[0.1em] sm:text-2xl sm:tracking-[0.18em]">Chats</h2>
+              <div className="mt-3 grid grid-cols-2 gap-2 rounded-full border border-white/10 bg-white/5 p-1">
+                {(['current', 'saved'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveTab(tab)}
+                    className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] transition sm:px-4 sm:tracking-[0.18em] ${activeTab === tab ? 'bg-white text-slate-950' : 'text-white/65 hover:bg-white/10'}`}
+                  >
+                    {tab === 'saved' ? 'chats' : tab}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
-              {messages.length === 0 ? (
+              {savedRooms.length === 0 ? (
                 <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-sm leading-6 text-white/60">
-                  No chat yet. Start the room.
+                  Joined chats will appear here.
                 </div>
               ) : (
-                messages.map((message) => (
-                  <div key={message.id} className="rounded-[1.2rem] border border-white/10 bg-white/5 px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-black uppercase tracking-[0.2em] text-white/50">{message.author}</p>
-                      <p className="text-[0.65rem] uppercase tracking-[0.18em] text-white/35">
-                        {new Date(message.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                      </p>
+                savedRooms.map((savedRoom) => (
+                  <button
+                    key={savedRoom.roomId}
+                    type="button"
+                    onClick={() => openSavedRoom(savedRoom)}
+                    className="w-full rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.25em] text-white/45">{savedRoom.eyebrow || savedRoom.section}</p>
+                        <h3 className="mt-2 text-base font-black uppercase tracking-[0.15em] text-white">{savedRoom.title}</h3>
+                      </div>
+                      {savedRoom.unreadCount > 0 && (
+                        <span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-950">
+                          {savedRoom.unreadCount}
+                        </span>
+                      )}
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-white/85">{message.body}</p>
-                  </div>
+                  </button>
                 ))
               )}
             </div>
-
-            <div className="border-t border-white/10 p-4 sm:p-5">
-              <div className="flex gap-3">
-                <input
-                  value={messageBody}
-                  onChange={(event) => setMessageBody(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') addMessage()
-                  }}
-                  className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none placeholder:text-white/45"
-                  placeholder="Say something"
-                />
-                <button
-                  type="button"
-                  onClick={addMessage}
-                  className="rounded-2xl bg-white px-3 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-slate-950 sm:px-4 sm:tracking-[0.18em]"
-                >
-                  send
-                </button>
-              </div>
-            </div>
           </>
-        ) : (
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 sm:p-5">
-            {savedRooms.length === 0 ? (
-              <div className="rounded-[1.25rem] border border-white/10 bg-white/5 p-5 text-sm leading-6 text-white/60">
-                Joined chats will appear here.
-              </div>
-            ) : (
-              savedRooms.map((savedRoom) => (
-                <button
-                  key={savedRoom.roomId}
-                  type="button"
-                  onClick={() => openSavedRoom(savedRoom)}
-                  className="w-full rounded-[1.25rem] border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.25em] text-white/45">{savedRoom.eyebrow || savedRoom.section}</p>
-                      <h3 className="mt-2 text-base font-black uppercase tracking-[0.15em] text-white">{savedRoom.title}</h3>
-                    </div>
-                    {savedRoom.unreadCount > 0 && (
-                      <span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-950">
-                        {savedRoom.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
         )}
       </aside>
     </>

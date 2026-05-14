@@ -27,7 +27,7 @@ export default function AppHeader() {
   const pathname = usePathname()
   const router = useRouter()
   const profilePath = useSyncExternalStore(subscribeToProfilePath, getProfilePathSnapshot, () => '')
-  const showHomeLink = pathname.startsWith('/humans/user/') || pathname.startsWith('/entry/') || pathname.startsWith('/once/') || pathname.startsWith('/humans/') || pathname === '/search'
+  const showHomeLink = pathname.startsWith('/humans/user/') || pathname.startsWith('/entry/') || pathname.startsWith('/once/') || pathname.startsWith('/humans/') || pathname === '/search' || pathname === '/login' || pathname === '/signup'
   const useStackedMobileHeader = showHomeLink
 
   const handleLogout = async () => {
@@ -94,6 +94,12 @@ export default function AppHeader() {
             className={navLinkClass}
           >
             Search
+          </Link>
+          <Link
+            href="/login"
+            className={navLinkClass}
+          >
+            Sign in
           </Link>
           <Link
             href="/signup"

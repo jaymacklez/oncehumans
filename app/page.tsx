@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import GalleryMediaSection from '@/components/GalleryMediaSection'
 import LiveChatDrawer from '@/components/LiveChatDrawer'
@@ -17,6 +17,7 @@ import {
   type Subcategory,
   type SectionType,
 } from '@/lib/content'
+import { humanProfileDirectoryChangedEvent, humanProfileDirectoryStorageKey, type HumanProfileListing } from '@/lib/human-profiles'
 
 type CompactPagePreviewProps = {
   page: ContentPage
@@ -39,6 +40,27 @@ const readStoredCompactPosts = (storageKey: string): CompactPost[] => {
   } catch {
     return []
   }
+}
+
+function subscribeToHumanProfiles(onStoreChange: () => void) {
+  window.addEventListener('storage', onStoreChange)
+  window.addEventListener(humanProfileDirectoryChangedEvent, onStoreChange)
+
+  return () => {
+    window.removeEventListener('storage', onStoreChange)
+    window.removeEventListener(humanProfileDirectoryChangedEvent, onStoreChange)
+  }
+}
+
+function getHumanProfilesSnapshot() {
+  if (typeof window === 'undefined') return '[]'
+  return localStorage.getItem(humanProfileDirectoryStorageKey) || '[]'
+}
+
+function getCompactTitleClass(title: string, baseSize = 'text-sm') {
+  if (title.length > 18) return 'text-[0.68rem] sm:text-xs'
+  if (title.length > 13) return 'text-xs sm:text-sm'
+  return baseSize
 }
 
 function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePreviewProps) {
@@ -84,15 +106,16 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
   return (
     <article className="w-full max-w-full space-y-4 overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/95 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:space-y-5 sm:rounded-[2rem] sm:p-6">
       <div className="rounded-[1.25rem] bg-slate-950 p-4 text-white sm:rounded-[1.75rem] sm:p-6">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-5">
           <div className="min-w-0">
             {onBack && (
               <button
                 type="button"
                 onClick={onBack}
-                className="mb-4 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/75 transition hover:bg-white/10"
+                aria-label="Back"
+                className="mb-4 flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-lg font-black leading-none text-white/75 transition hover:bg-white/10 hover:text-white"
               >
-                back
+                &lt;
               </button>
             )}
             <p className="break-words text-[0.7rem] uppercase tracking-[0.16em] text-white/55 sm:text-xs sm:tracking-[0.3em]">
@@ -100,8 +123,12 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
             </p>
             <h2 className="mt-3 break-words text-2xl font-black uppercase tracking-[0.08em] text-white sm:text-3xl sm:tracking-[0.18em]">{page.title}</h2>
           </div>
+        </div>
+        <p className="mt-6 max-w-3xl text-sm leading-7 text-white/78">{page.description}</p>
+        <div className="mt-5">
           <LiveChatDrawer
             key={`entry:${page.id}`}
+            variant="embedded"
             room={{
               id: `entry:${page.id}`,
               title: page.title,
@@ -110,7 +137,6 @@ function CompactPagePreview({ page, onSelectRelated, onBack }: CompactPagePrevie
             }}
           />
         </div>
-        <p className="mt-6 max-w-3xl text-sm leading-7 text-white/78">{page.description}</p>
       </div>
 
       <GalleryMediaSection
@@ -211,7 +237,17 @@ export default function Home() {
   const [promotedCategory, setPromotedCategory] = useState('')
   const [selectedCategoryOffset, setSelectedCategoryOffset] = useState(0)
   const railRef = useRef<HTMLDivElement | null>(null)
-  const categoryRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const categoryRefs = useRef<Record<string, HTMLElement | null>>({})
+  const pendingStackRects = useRef<Record<string, DOMRect>>({})
+  const shouldAnimateStack = useRef(false)
+  const humanProfilesSnapshot = useSyncExternalStore(subscribeToHumanProfiles, getHumanProfilesSnapshot, () => '[]')
+  const humanProfiles = useMemo(() => {
+    try {
+      return JSON.parse(humanProfilesSnapshot) as HumanProfileListing[]
+    } catch {
+      return []
+    }
+  }, [humanProfilesSnapshot])
 
   const selectedPage = useMemo(() => findPageById(selectedPageId), [selectedPageId])
 
@@ -247,6 +283,20 @@ export default function Home() {
     }, 0)
 
     return () => window.clearTimeout(timeout)
+  }, [])
+
+  useEffect(() => {
+    const restoreInteractiveState = () => {
+      document.body.style.pointerEvents = ''
+      document.body.style.overflow = ''
+    }
+
+    window.addEventListener('pageshow', restoreInteractiveState)
+    restoreInteractiveState()
+
+    return () => {
+      window.removeEventListener('pageshow', restoreInteractiveState)
+    }
   }, [])
 
   useEffect(() => {
@@ -288,6 +338,41 @@ export default function Home() {
     }
   }, [openCategory, openSection, useDesktopCategoryOrder])
 
+  useLayoutEffect(() => {
+    if (!shouldAnimateStack.current) return
+
+    shouldAnimateStack.current = false
+    const previousRects = pendingStackRects.current
+
+    Object.entries(previousRects).forEach(([title, previousRect]) => {
+      const element = categoryRefs.current[title]
+      if (!element) return
+
+      const nextRect = element.getBoundingClientRect()
+      const deltaX = previousRect.left - nextRect.left
+      const deltaY = previousRect.top - nextRect.top
+
+      element.animate(
+        [
+          {
+            transform: `translate(${deltaX}px, ${deltaY}px) scale(0.985)`,
+            boxShadow: '0 18px 45px rgba(15, 23, 42, 0.14)',
+          },
+          {
+            transform: 'translate(0, 0) scale(1)',
+            boxShadow: '0 18px 45px rgba(15, 23, 42, 0.13)',
+          },
+        ],
+        {
+          duration: 460,
+          easing: 'cubic-bezier(0.2, 0, 0, 1)',
+          fill: 'both',
+        }
+      )
+    })
+    pendingStackRects.current = {}
+  }, [openCategory, openSection, promotedCategory, useDesktopCategoryOrder])
+
   const chooseSection = (section: SectionType) => {
     setOpenSection((current) => current === section ? null : section)
     setOpenCategory('')
@@ -298,6 +383,19 @@ export default function Home() {
   }
 
   const chooseCategory = (category: Category) => {
+    if (!openCategory || openCategory === category.title) {
+      const currentCategories = openSection ? categories[openSection] : []
+      pendingStackRects.current = Object.fromEntries(
+        currentCategories
+          .map((currentCategory) => {
+            const element = categoryRefs.current[currentCategory.title]
+            return element ? [currentCategory.title, element.getBoundingClientRect()] : undefined
+          })
+          .filter((entry): entry is [string, DOMRect] => Boolean(entry))
+      )
+      shouldAnimateStack.current = true
+    }
+
     setOpenCategory((current) => {
       const nextCategory = current === category.title ? '' : category.title
       if (!current) {
@@ -331,7 +429,12 @@ export default function Home() {
 
   const getSubcategoryPageCount = (category: Category, subcategory: Subcategory) => {
     if (!openSection) return 0
-    return getPagesForSubcategory(openSection, category.title, subcategory.title).length
+    const seededCount = getPagesForSubcategory(openSection, category.title, subcategory.title).length
+    const profileCount = openSection === 'humans'
+      ? humanProfiles.filter((profile) => profile.category === category.title && profile.subcategory === subcategory.title).length
+      : 0
+
+    return seededCount + profileCount
   }
 
   const getOrderedSubcategories = (category: Category) => (
@@ -346,7 +449,7 @@ export default function Home() {
   const selectedCategory = activeCategories.find((category) => category.title === openCategory)
   const orderedSubcategories = selectedCategory ? getOrderedSubcategories(selectedCategory) : []
   const selectedSubcategory = selectedCategory?.subcategories.find((subcategory) => subcategory.title === openSubcategory)
-  const orderedCategories = promotedCategory
+  const orderedCategories = promotedCategory && useDesktopCategoryOrder
     ? [
         ...activeCategories.filter((category) => category.title === promotedCategory),
         ...activeCategories.filter((category) => category.title !== promotedCategory),
@@ -370,7 +473,7 @@ export default function Home() {
                 className={`group block w-full overflow-hidden rounded-[1.6rem] border text-left shadow-[0_18px_45px_rgba(15,23,42,0.13)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.18)] ${openCategory === category.title ? 'border-black bg-black' : 'border-black/10 bg-slate-950'}`}
               >
                 <div className={`h-28 rounded-t-[1.6rem] bg-gradient-to-br ${category.accent} bg-cover bg-center`} />
-                <div className="bg-slate-950 p-5">
+              <div className="bg-slate-950 p-5">
                   <h3 className="break-words text-lg font-black uppercase tracking-[0.12em] text-white sm:text-xl sm:tracking-[0.18em]">{category.title}</h3>
                 </div>
               </button>
@@ -392,7 +495,7 @@ export default function Home() {
             </div>
 
             {openCategory === category.title && (
-              <div className="hidden rounded-[1.35rem] bg-slate-950 p-4 shadow-[0_15px_35px_rgba(15,23,42,0.12)] lg:block">
+              <div className="browse-soft-open hidden rounded-[1.35rem] bg-slate-950 p-4 shadow-[0_15px_35px_rgba(15,23,42,0.12)] lg:block">
                 <LiveChatDrawer
                   label={`${category.title} chat`}
                   room={{
@@ -407,51 +510,70 @@ export default function Home() {
             )}
 
             {openCategory === category.title && (
-              <div className="grid max-h-[11.5rem] gap-3 overflow-y-auto overscroll-contain scroll-smooth rounded-[1.35rem] border border-black/10 bg-white/95 p-3 pr-2 shadow-[0_15px_35px_rgba(15,23,42,0.08)] [-webkit-overflow-scrolling:touch] lg:hidden">
-                {getOrderedSubcategories(category).map((subcategory) => (
-                  <div key={subcategory.title} className="space-y-2">
+              <div className="browse-soft-open rounded-[1.35rem] border border-black/10 bg-white/95 p-3 shadow-[0_15px_35px_rgba(15,23,42,0.08)] lg:hidden">
+                <div className="grid max-h-[11.5rem] gap-3 overflow-y-auto overscroll-contain scroll-smooth pr-2 [-webkit-overflow-scrolling:touch]">
+                  {getOrderedSubcategories(category).map((subcategory) => (
                     <button
+                      key={subcategory.title}
                       type="button"
                       onClick={() => {
                         setOpenSubcategory((current) => current === subcategory.title ? '' : subcategory.title)
                         setSelectedPageId('')
                         setSelectedPagePlacement('rail')
                       }}
-                      className={`w-full rounded-[1rem] border px-4 py-3 text-left transition hover:-translate-y-0.5 ${openSubcategory === subcategory.title ? 'border-black bg-black text-white' : 'border-black/10 bg-slate-50 text-black'}`}
+                      className={`w-full rounded-[0.85rem] border px-3 py-2.5 text-left transition hover:-translate-y-0.5 ${openSubcategory === subcategory.title ? 'border-black bg-black text-white' : 'border-black/10 bg-slate-50 text-black'}`}
                     >
-                      <h3 className="break-words text-sm font-black uppercase tracking-[0.1em]">{subcategory.title}</h3>
+                      <h3 className={`${getCompactTitleClass(subcategory.title)} truncate whitespace-nowrap text-center font-black uppercase tracking-[0.08em]`}>{subcategory.title}</h3>
                     </button>
+                  ))}
+                </div>
 
-                    {openSubcategory === subcategory.title && (
-                      <div className="overflow-x-auto rounded-[0.9rem] border border-black/10 bg-white/80 px-2 py-2 shadow-[0_10px_22px_rgba(15,23,42,0.08)]">
-                        <div className="flex w-max gap-2">
-                          {getPagesForSubcategory(openSection!, category.title, subcategory.title).map((page) => (
-                            <button
-                              key={page.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedPageId(page.id)
-                                setSelectedPagePlacement('rail')
-                              }}
-                              className="w-24 shrink-0 overflow-hidden rounded-[0.7rem] bg-slate-950 text-left text-white shadow-[0_8px_18px_rgba(15,23,42,0.14)]"
-                            >
-                              <div className={`h-10 rounded-t-[0.7rem] bg-gradient-to-br ${category.accent} bg-cover bg-center`} />
-                              <div className="space-y-1 p-2">
-                                <p className="truncate text-[0.45rem] font-black uppercase tracking-[0.06em] text-white/45">{page.category}</p>
-                                <h4 className="line-clamp-2 text-[0.62rem] font-black uppercase tracking-[0.04em] text-white">{page.title}</h4>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                {openSubcategory && (
+                  <div className="browse-soft-open mt-3 overflow-x-auto rounded-[0.9rem] border border-black/10 bg-white/80 px-2 py-2 shadow-[0_10px_22px_rgba(15,23,42,0.08)]">
+                    <div className="flex w-max gap-2">
+                      {getPagesForSubcategory(openSection!, category.title, openSubcategory).map((page) => (
+                        <button
+                          key={page.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedPageId(page.id)
+                            setSelectedPagePlacement('rail')
+                          }}
+                          className="w-24 shrink-0 overflow-hidden rounded-[0.7rem] bg-slate-950 text-left text-white shadow-[0_8px_18px_rgba(15,23,42,0.14)]"
+                        >
+                          <div className={`h-10 rounded-t-[0.7rem] bg-gradient-to-br ${category.accent} bg-cover bg-center`} />
+                          <div className="space-y-1 p-2">
+                            <p className="truncate text-[0.45rem] font-black uppercase tracking-[0.06em] text-white/45">{page.category}</p>
+                            <h4 className="line-clamp-2 text-[0.62rem] font-black uppercase tracking-[0.04em] text-white">{page.title}</h4>
+                          </div>
+                        </button>
+                      ))}
+                      {openSection === 'humans' && humanProfiles
+                        .filter((profile) => profile.category === category.title && profile.subcategory === openSubcategory)
+                        .map((profile) => (
+                          <Link
+                            key={`profile:${profile.username}`}
+                            href={profile.profilePath}
+                            className="w-24 shrink-0 overflow-hidden rounded-[0.7rem] bg-slate-950 text-left text-white shadow-[0_8px_18px_rgba(15,23,42,0.14)]"
+                          >
+                            <div className={`flex h-10 items-center justify-center rounded-t-[0.7rem] bg-gradient-to-br ${category.accent} bg-cover bg-center text-lg font-black uppercase tracking-[0.16em] text-slate-950`}>
+                              {(profile.displayName || profile.username).charAt(0)}
+                            </div>
+                            <div className="space-y-1 p-2">
+                              <p className="truncate text-[0.45rem] font-black uppercase tracking-[0.06em] text-white/45">{profile.category}</p>
+                              <h4 className="line-clamp-2 text-[0.62rem] font-black uppercase tracking-[0.04em] text-white">{profile.displayName || profile.username}</h4>
+                              <p className="truncate text-[0.48rem] text-white/45">@{profile.username}</p>
+                            </div>
+                          </Link>
+                        ))}
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             )}
 
             {openCategory === category.title && selectedPage && selectedPagePlacement === 'rail' && (
-              <div className="mt-4 w-full max-w-full lg:hidden">
+              <div className="browse-rise-in mt-4 w-full max-w-full lg:hidden">
                 <CompactPagePreview key={selectedPage.id} page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
               </div>
             )}
@@ -462,21 +584,25 @@ export default function Home() {
   )
 
   const browseContent = selectedPage ? (
-    <CompactPagePreview key={selectedPage.id} page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
+    <div className="browse-rise-in">
+      <CompactPagePreview key={selectedPage.id} page={selectedPage} onSelectRelated={focusPage} onBack={clearSelectedPage} />
+    </div>
   ) : selectedCategory && selectedSubcategory ? (
-    <SubcategoryPageSurface
-      key={`${openSection}-${selectedCategory.title}-${selectedSubcategory.title}`}
-      section={openSection!}
-      category={selectedCategory}
-      subcategory={selectedSubcategory}
-      onBack={() => {
-        setOpenSubcategory('')
-        setSelectedPageId('')
-        setSelectedPagePlacement('content')
-      }}
-    />
+    <div className="browse-rise-in">
+      <SubcategoryPageSurface
+        key={`${openSection}-${selectedCategory.title}-${selectedSubcategory.title}`}
+        section={openSection!}
+        category={selectedCategory}
+        subcategory={selectedSubcategory}
+        onBack={() => {
+          setOpenSubcategory('')
+          setSelectedPageId('')
+          setSelectedPagePlacement('content')
+        }}
+      />
+    </div>
   ) : selectedCategory ? (
-    <div className="space-y-4 rounded-[1.5rem] border border-black/10 bg-white/80 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.08)] sm:rounded-[2rem] sm:p-6">
+    <div className="browse-rise-in space-y-4 rounded-[1.5rem] border border-black/10 bg-white/80 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.08)] sm:rounded-[2rem] sm:p-6">
         <div className="flex flex-wrap gap-3">
         {orderedSubcategories.map((subcategory) => {
           return (
@@ -489,9 +615,9 @@ export default function Home() {
                 event.preventDefault()
                 openDesktopSubcategory(subcategory)
               }}
-              className={`rounded-[1rem] border px-5 py-4 text-left transition hover:-translate-y-0.5 ${openSubcategory === subcategory.title ? 'border-black bg-black text-white' : 'border-black/10 bg-slate-50 text-black'}`}
+              className={`rounded-[0.9rem] border px-4 py-3 text-left transition hover:-translate-y-0.5 ${openSubcategory === subcategory.title ? 'border-black bg-black text-white' : 'border-black/10 bg-slate-50 text-black'}`}
             >
-              <h3 className="break-words text-base font-black uppercase tracking-[0.08em] sm:text-lg sm:tracking-[0.12em]">{subcategory.title}</h3>
+              <h3 className={`${getCompactTitleClass(subcategory.title, 'text-base sm:text-lg')} truncate whitespace-nowrap text-center font-black uppercase tracking-[0.07em] sm:tracking-[0.1em]`}>{subcategory.title}</h3>
             </Link>
           )
         })}
@@ -505,7 +631,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#f4ead4] text-black font-sans">
-      <main className="mx-auto flex min-h-screen max-w-7xl flex-col items-center px-4 py-8 sm:px-6 sm:py-16">
+      <main className={`mx-auto flex min-h-[calc(100vh-4.5rem)] max-w-7xl flex-col items-center px-4 transition-[padding] duration-500 ease-out sm:px-6 ${openSection ? 'pt-8 pb-8 sm:pt-16 sm:pb-16' : 'pt-[28vh] pb-10 sm:pt-[30vh] sm:pb-16'}`}>
         <div className="flex w-full max-w-6xl items-stretch justify-center gap-2 sm:items-center sm:gap-6 lg:gap-8">
           <button
             type="button"
@@ -533,7 +659,7 @@ export default function Home() {
                 </p>
                 {openCategory && (
                   <p className="break-words text-xs uppercase tracking-[0.12em] text-black/45 sm:text-sm sm:tracking-[0.25em]">
-                    {[openSection, openCategory, openSubcategory, selectedPage?.title].filter(Boolean).join(' / ')}
+                    {[openCategory, openSubcategory, selectedPage?.title].filter(Boolean).join(' / ')}
                   </p>
                 )}
               </div>
@@ -544,6 +670,9 @@ export default function Home() {
                 {activeCategories.map((category) => (
                   <button
                     key={category.title}
+                    ref={(element) => {
+                      categoryRefs.current[category.title] = element
+                    }}
                     type="button"
                     onClick={() => chooseCategory(category)}
                   className="group block w-full overflow-hidden rounded-[1.5rem] border border-black/10 bg-slate-950 text-left shadow-[0_25px_60px_rgba(15,23,42,0.18)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(15,23,42,0.22)] sm:min-w-[18rem] sm:rounded-[2rem]"

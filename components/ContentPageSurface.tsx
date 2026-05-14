@@ -72,8 +72,18 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
   const relatedPages = getRelatedPages(page)
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
+    <div className="browse-rise-in space-y-8">
+      <section className="relative rounded-[2rem] border border-black/10 bg-white/95 p-6 pt-16 shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:p-8 sm:pt-16">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label="Back"
+            className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-lg font-black leading-none text-black/70 shadow-[0_8px_20px_rgba(15,23,42,0.08)] transition hover:bg-slate-100 hover:text-black sm:left-5 sm:top-5"
+          >
+            &lt;
+          </button>
+        )}
         <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="rounded-[2rem] border border-black/10 bg-slate-950 p-6 text-white">
             <div className="flex flex-col items-center gap-5 text-center">
@@ -90,31 +100,17 @@ export default function ContentPageSurface({ page, onSelectRelated, relatedMode 
             </div>
           </aside>
 
-          <div className="rounded-[2rem] border border-black/10 bg-slate-950 p-8 text-white">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                {onBack && (
-                  <button
-                    type="button"
-                    onClick={onBack}
-                    className="mb-5 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white/75 transition hover:bg-white/10"
-                  >
-                    back
-                  </button>
-                )}
-                <p className="text-sm uppercase tracking-[0.35em] text-white/60">{page.section}</p>
-                <h1 className="mt-3 text-3xl font-black uppercase tracking-[0.2em] text-white">{page.title}</h1>
-              </div>
-              <LiveChatDrawer
-                key={`entry:${page.id}`}
-                room={{
-                  id: `entry:${page.id}`,
-                  title: page.title,
-                  section: page.section,
-                  href: `/entry/${page.id}`,
-                }}
-              />
-            </div>
+          <div className="rounded-[2rem] border border-black/10 bg-slate-950 p-4 text-white sm:p-5">
+            <LiveChatDrawer
+              key={`entry:${page.id}`}
+              variant="embedded"
+              room={{
+                id: `entry:${page.id}`,
+                title: page.title,
+                section: page.section,
+                href: `/entry/${page.id}`,
+              }}
+            />
           </div>
         </div>
       </section>

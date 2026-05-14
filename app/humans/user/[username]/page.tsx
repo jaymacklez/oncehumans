@@ -4,6 +4,16 @@ import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import GalleryMediaSection from '@/components/GalleryMediaSection'
 import LiveChatDrawer from '@/components/LiveChatDrawer'
+import {
+  getDefaultHumanSubcategory,
+  getHumanCategoryOptions,
+  getHumanSubcategoryLabel,
+  getHumanSubcategoryOptions,
+  getHumanTypeLabel,
+  getStoredHumanProfile,
+  normalizeHumanCategory,
+  upsertHumanProfile,
+} from '@/lib/human-profiles'
 
 type Post = {
   id: string
@@ -11,25 +21,6 @@ type Post = {
   body: string
   comments: string[]
 }
-
-const singularHumanTypes: Record<string, string> = {
-  Creators: 'Creator',
-  Artists: 'Artist',
-  Engineers: 'Engineer',
-  Scientists: 'Scientist',
-  Writers: 'Writer',
-  Performers: 'Performer',
-  human: 'human',
-}
-
-const humanTypeOptions = [
-  'Creators',
-  'Artists',
-  'Engineers',
-  'Scientists',
-  'Writers',
-  'Performers',
-]
 
 const minProfileZoom = 1
 const maxProfileZoom = 3
@@ -98,19 +89,31 @@ export default function HumanUserPage() {
   const typeFromUrl = searchParams?.get('type') || ''
 
   const [humanType, setHumanType] = useState(() => {
-    if (typeFromUrl) return typeFromUrl
-    if (typeof window === 'undefined') return 'human'
-    return localStorage.getItem(`once-humans-profile-type:${username}`) || 'human'
+    if (typeof window === 'undefined') return 'Creators'
+    return normalizeHumanCategory(getStoredHumanProfile(username)?.type || localStorage.getItem(`once-humans-profile-type:${username}`) || typeFromUrl)
+  })
+  const [humanCategory, setHumanCategory] = useState(() => {
+    if (typeof window === 'undefined') return normalizeHumanCategory(typeFromUrl)
+    return getStoredHumanProfile(username)?.category || normalizeHumanCategory(localStorage.getItem(`once-humans-profile-category:${username}`) || typeFromUrl)
+  })
+  const [humanSubcategory, setHumanSubcategory] = useState(() => {
+    if (typeof window === 'undefined') return 'People'
+    const category = getStoredHumanProfile(username)?.category || normalizeHumanCategory(localStorage.getItem(`once-humans-profile-category:${username}`) || typeFromUrl)
+    return getStoredHumanProfile(username)?.subcategory || localStorage.getItem(`once-humans-profile-subcategory:${username}`) || getDefaultHumanSubcategory(category)
   })
   const descriptionStorageKey = `once-humans-profile-description:${username}`
   const profileImageStorageKey = `once-humans-profile-image:${username}`
   const postsStorageKey = `once-humans-profile-posts:${username}`
+  const displayNameStorageKey = `once-humans-profile-name:${username}`
 
   const [description, setDescription] = useState(() => (
     typeof window === 'undefined' ? defaultDescription : localStorage.getItem(descriptionStorageKey) || defaultDescription
   ))
+  const [displayName] = useState(() => (
+    typeof window === 'undefined' ? username : getStoredHumanProfile(username)?.displayName || localStorage.getItem(displayNameStorageKey) || username
+  ))
   const [editingDescription, setEditingDescription] = useState(false)
-  const [editingHumanType, setEditingHumanType] = useState(false)
+  const [editingProfile, setEditingProfile] = useState(false)
   const [profileImage, setProfileImage] = useState<ProfileCrop | null>(() => readLocalStorage<ProfileCrop | null>(profileImageStorageKey, null))
   const [pendingProfileImage, setPendingProfileImage] = useState<ProfileCrop | null>(null)
   const [cropDrag, setCropDrag] = useState<CropDrag | null>(null)
@@ -129,13 +132,19 @@ export default function HumanUserPage() {
   }, [pendingProfileImage])
 
   useEffect(() => {
-    localStorage.setItem(`once-humans-profile-type:${username}`, humanType)
-    localStorage.setItem(
-      'once-humans-profile-path',
-      `/humans/user/${username}?type=${encodeURIComponent(humanType)}`
-    )
-    window.dispatchEvent(new Event('once-humans-profile-changed'))
-  }, [humanType, username])
+    const category = normalizeHumanCategory(humanCategory || humanType)
+    const subcategory = humanSubcategory || getDefaultHumanSubcategory(category)
+    const profilePath = `/humans/user/${username}?type=${encodeURIComponent(category)}`
+
+    upsertHumanProfile({
+      username,
+      displayName,
+      category,
+      subcategory,
+      type: category,
+      profilePath,
+    })
+  }, [displayName, humanCategory, humanSubcategory, humanType, username])
 
   useEffect(() => {
     localStorage.setItem(descriptionStorageKey, description)
@@ -154,7 +163,15 @@ export default function HumanUserPage() {
     localStorage.setItem(postsStorageKey, JSON.stringify(posts))
   }, [posts, postsStorageKey])
 
-  const displayType = singularHumanTypes[humanType] || humanType
+  const displayType = getHumanTypeLabel(humanCategory || humanType)
+  const humanSubcategoryOptions = getHumanSubcategoryOptions(humanCategory)
+
+  const updateHumanCategory = (category: string) => {
+    const normalizedCategory = normalizeHumanCategory(category)
+    setHumanCategory(normalizedCategory)
+    setHumanType(normalizedCategory)
+    setHumanSubcategory(getDefaultHumanSubcategory(normalizedCategory))
+  }
 
   const handleProfileImage = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -257,7 +274,7 @@ export default function HumanUserPage() {
             <div className="rounded-[2rem] border border-black/10 bg-slate-950 p-6 text-white">
               <div className="flex flex-col items-center gap-5">
                 <label
-                  className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-[1.5rem] bg-white text-4xl font-black uppercase tracking-[0.25em] text-slate-950 transition hover:opacity-90"
+                  className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white text-4xl font-black uppercase tracking-[0.25em] text-slate-950 transition hover:opacity-90"
                 >
                   {profileImage ? (
                     <img
@@ -268,34 +285,21 @@ export default function HumanUserPage() {
                       style={getProfileImageStyle(profileImage)}
                     />
                   ) : (
-                    username.charAt(0) || 'H'
+                    displayName.charAt(0) || username.charAt(0) || 'H'
                   )}
                   <input type="file" accept="image/*" onChange={handleProfileImage} className="hidden" />
                 </label>
                 <div className="space-y-1 text-center">
-                  {editingHumanType ? (
-                    <select
-                      value={humanType}
-                      onChange={(event) => setHumanType(event.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-center text-xs uppercase tracking-[0.12em] text-white outline-none"
-                    >
-                      <option value="human" className="text-black">Human</option>
-                      {humanTypeOptions.map((option) => (
-                        <option key={option} value={option} className="text-black">
-                          {singularHumanTypes[option]}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <p className="text-sm uppercase tracking-[0.35em] text-white/75">{displayType}</p>
-                  )}
-                  <p className="text-xs text-white/60">@{username}</p>
+                  <p className="text-sm uppercase tracking-[0.35em] text-white/75">{displayType}</p>
+                  <p className="text-[0.65rem] uppercase tracking-[0.2em] text-white/45">{getHumanSubcategoryLabel(humanSubcategory)}</p>
+                  <p className="text-xs text-white/60">{displayName}</p>
+                  <p className="text-xs text-white/45">@{username}</p>
                   <button
                     type="button"
-                    onClick={() => setEditingHumanType((current) => !current)}
+                    onClick={() => setEditingProfile(true)}
                     className="mt-2 rounded-full border border-white/15 px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.16em] text-white/70 transition hover:bg-white/10"
                   >
-                    {editingHumanType ? 'save type' : 'edit type'}
+                    edit profile
                   </button>
                 </div>
               </div>
@@ -319,19 +323,17 @@ export default function HumanUserPage() {
               </div>
             </div>
 
-            <div className="relative rounded-[2rem] border border-black/10 bg-slate-950 p-8 text-white">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                <h1 className="text-3xl font-black uppercase tracking-[0.2em] text-white">{username}</h1>
-                <LiveChatDrawer
-                  key={`profile:${username}`}
-                  room={{
-                    id: `profile:${username}`,
-                    title: username,
-                    section: 'humans',
-                    href: `/humans/user/${username}?type=${encodeURIComponent(humanType)}`,
-                  }}
-                />
-              </div>
+            <div className="relative rounded-[2rem] border border-black/10 bg-slate-950 p-4 text-white sm:p-5">
+              <LiveChatDrawer
+                key={`profile:${username}`}
+                variant="embedded"
+                room={{
+                  id: `profile:${username}`,
+                  title: displayName,
+                  section: 'humans',
+                  href: `/humans/user/${username}?type=${encodeURIComponent(humanCategory)}`,
+                }}
+              />
             </div>
           </div>
         </section>
@@ -340,7 +342,7 @@ export default function HumanUserPage() {
           emptyMessage="Upload photos or videos to populate this gallery."
           storageKey={`once-humans-gallery:profile:${username}`}
           chatSection="humans"
-          chatHref={`/humans/user/${username}?type=${encodeURIComponent(humanType)}`}
+          chatHref={`/humans/user/${username}?type=${encodeURIComponent(humanCategory)}`}
           chatEyebrow={`gallery from ${displayType.toLowerCase()} ${username}`}
         />
 
@@ -392,7 +394,7 @@ export default function HumanUserPage() {
                       title: post.body.length > 64 ? `${post.body.slice(0, 64)}...` : post.body,
                       section: 'humans',
                       eyebrow: `post from ${displayType.toLowerCase()} ${username}`,
-                      href: `/humans/user/${username}?type=${encodeURIComponent(humanType)}`,
+                      href: `/humans/user/${username}?type=${encodeURIComponent(humanCategory)}`,
                     }}
                   />
                 </div>
@@ -416,7 +418,7 @@ export default function HumanUserPage() {
               </button>
             </div>
             <div
-              className={`mx-auto h-56 w-56 touch-none overflow-hidden rounded-[1.5rem] bg-slate-950 ${cropDrag ? 'cursor-grabbing' : 'cursor-grab'}`}
+              className={`mx-auto h-56 w-56 touch-none overflow-hidden rounded-full bg-slate-950 ${cropDrag ? 'cursor-grabbing' : 'cursor-grab'}`}
               onPointerDown={startProfileCropDrag}
               onPointerMove={moveProfileCrop}
               onPointerUp={stopProfileCropDrag}
@@ -439,6 +441,83 @@ export default function HumanUserPage() {
             >
               Apply
             </button>
+          </div>
+        </div>
+      )}
+
+      {editingProfile && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center overflow-y-auto bg-black/60 px-4 py-8">
+          <div className="w-full max-w-lg rounded-[2rem] border border-black/10 bg-white p-6 text-black shadow-[0_30px_80px_rgba(0,0,0,0.28)] sm:p-8">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setEditingProfile(false)}
+                className="rounded-full border border-black/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-black/65 transition hover:bg-slate-100 hover:text-black"
+              >
+                close
+              </button>
+            </div>
+
+            <div className="mt-2 space-y-6">
+              <label className="mx-auto block w-40 cursor-pointer text-center">
+                <span className="relative mx-auto flex h-36 w-36 items-center justify-center overflow-hidden rounded-full border border-black/10 bg-slate-950 text-white shadow-[0_18px_45px_rgba(15,23,42,0.18)] transition hover:opacity-90">
+                  {profileImage ? (
+                    <img
+                      src={profileImage.src}
+                      alt=""
+                      className="pointer-events-none h-full w-full select-none object-cover"
+                      draggable={false}
+                      style={getProfileImageStyle(profileImage)}
+                    />
+                  ) : (
+                    <span className="text-4xl font-light leading-none">+</span>
+                  )}
+                  <input type="file" accept="image/*" onChange={handleProfileImage} className="hidden" />
+                </span>
+                {profileImage && (
+                  <span className="mt-3 block text-xs font-black uppercase tracking-[0.16em] text-black/55">
+                    change image
+                  </span>
+                )}
+              </label>
+
+              <div className="space-y-4">
+                <p className="whitespace-nowrap text-center text-[0.68rem] uppercase tracking-[0.08em] text-black/50 sm:text-sm sm:tracking-[0.25em]">
+                  what type of human are you?
+                </p>
+                <select
+                  value={humanCategory}
+                  onChange={(event) => updateHumanCategory(event.target.value)}
+                  className="w-full rounded-2xl border border-black/10 bg-slate-50 px-4 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-black outline-none focus:border-black/25"
+                >
+                  {getHumanCategoryOptions().map((option) => (
+                    <option key={option} value={option}>
+                      {getHumanTypeLabel(option)}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={humanSubcategory}
+                  onChange={(event) => setHumanSubcategory(event.target.value)}
+                  className="w-full rounded-2xl border border-black/10 bg-slate-50 px-4 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-black outline-none focus:border-black/25"
+                >
+                  {humanSubcategoryOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {getHumanSubcategoryLabel(option)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setEditingProfile(false)}
+                className="w-full rounded-2xl bg-black px-5 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-slate-900"
+              >
+                save profile
+              </button>
+            </div>
           </div>
         </div>
       )}
