@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { type ReactNode, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 
 export type LiveChatSide = 'left' | 'right'
 
@@ -152,6 +152,7 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
   const [messageBody, setMessageBody] = useState('')
   const [replyingTo, setReplyingTo] = useState<LiveChatMessage | null>(null)
   const composerRef = useRef<HTMLInputElement | null>(null)
+  const [isMobileChat, setIsMobileChat] = useState(false)
   const visibleRoom = variant === 'embedded' ? currentRoom : activeRoom
 
   const messagesByUser = useMemo(() => {
@@ -215,6 +216,23 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
     if (!replyingTo) return
     composerRef.current?.focus()
   }, [replyingTo])
+
+  useEffect(() => {
+    if (!open || activeTab !== 'current') return
+    requestAnimationFrame(() => composerRef.current?.focus())
+  }, [activeTab, open, visibleRoom.id])
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)')
+    const syncMobileChat = () => setIsMobileChat(mediaQuery.matches)
+
+    syncMobileChat()
+    mediaQuery.addEventListener('change', syncMobileChat)
+
+    return () => {
+      mediaQuery.removeEventListener('change', syncMobileChat)
+    }
+  }, [])
 
   const persistMessages = (nextMessagesByRoom: ChatMessagesByRoom) => {
     const nextMessagesByUser = {
@@ -324,6 +342,18 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
     )))
   }
 
+  const openDrawerForRoom = (nextRoom = currentRoom, nextTab: 'current' | 'saved' = 'current') => {
+    if (!signedIn) {
+      redirectToAuth()
+      return
+    }
+
+    setActiveRoom(nextRoom)
+    setActiveTab(nextTab)
+    window.dispatchEvent(new CustomEvent(chatDrawerOpenedEvent, { detail: { drawerId } }))
+    setOpen(true)
+  }
+
   const sortedMessages = useMemo(() => {
     return [...messages].sort((firstMessage, secondMessage) => {
       const scoreDifference = (secondMessage.score || 0) - (firstMessage.score || 0)
@@ -387,7 +417,7 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
   }
 
   const chatPanel = (embedded = false) => (
-    <div className={embedded ? 'flex min-h-[28rem] flex-col overflow-hidden' : 'contents'}>
+    <div className={embedded ? 'flex h-[30rem] max-h-[70dvh] min-h-[24rem] flex-col overflow-hidden' : 'contents'}>
       <div className={embedded ? 'border-b border-white/10 pb-4' : 'relative border-b border-white/10 p-4 pr-28 sm:p-5 sm:pr-32'}>
         {embedded ? (
           <div className="flex items-center justify-between gap-4">
@@ -447,7 +477,7 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
         )}
       </div>
 
-      <div className={embedded ? 'border-t border-white/10 pt-4' : 'border-t border-white/10 p-4 sm:p-5'}>
+      <div className={embedded ? 'mt-auto border-t border-white/10 pt-4' : 'border-t border-white/10 p-4 sm:p-5'}>
         {replyingTo && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/60">
             <span className="min-w-0 truncate">Replying to {replyingTo.author}: {replyingTo.body}</span>
@@ -460,31 +490,50 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
             </button>
           </div>
         )}
-        <div className="flex gap-3">
-          <input
-            ref={composerRef}
-            value={messageBody}
-            onChange={(event) => setMessageBody(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') addMessage()
-            }}
-            className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none placeholder:text-white/45"
-            placeholder="Say something"
-          />
+        {embedded && isMobileChat ? (
           <button
             type="button"
-            onClick={addMessage}
-            className="rounded-2xl bg-white px-3 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-slate-950 sm:px-4 sm:tracking-[0.18em]"
+            onClick={() => openDrawerForRoom(currentRoom)}
+            className="w-full rounded-2xl bg-white px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-slate-950"
           >
-            send
+            chat
           </button>
-        </div>
+        ) : (
+          <div className="flex gap-3">
+            <input
+              ref={composerRef}
+              value={messageBody}
+              onChange={(event) => setMessageBody(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') addMessage()
+              }}
+              className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-base text-white outline-none placeholder:text-white/45 sm:text-sm"
+              placeholder="Say something"
+            />
+            <button
+              type="button"
+              onClick={addMessage}
+              className="rounded-2xl bg-white px-3 py-3 text-sm font-semibold uppercase tracking-[0.12em] text-slate-950 sm:px-4 sm:tracking-[0.18em]"
+            >
+              send
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
 
   if (variant === 'embedded') {
-    return chatPanel(true)
+    return (
+      <>
+        {chatPanel(true)}
+        {isMobileChat && (
+          <ChatDrawerShell open={open}>
+            {chatPanel(false)}
+          </ChatDrawerShell>
+        )}
+      </>
+    )
   }
 
   return (
@@ -492,21 +541,13 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
       <button
         type="button"
         onClick={() => {
-          if (!signedIn) {
-            redirectToAuth()
-            return
-          }
-
-          setActiveRoom(currentRoom)
-          setActiveTab(variant === 'global' ? 'saved' : 'current')
-          window.dispatchEvent(new CustomEvent(chatDrawerOpenedEvent, { detail: { drawerId } }))
-          setOpen(true)
+          openDrawerForRoom(currentRoom, variant === 'global' ? 'saved' : 'current')
         }}
-        className={variant === 'global'
-          ? 'fixed bottom-3 right-3 z-40 rounded-full border border-black/10 bg-slate-950 px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-white shadow-[0_15px_40px_rgba(15,23,42,0.22)] transition hover:bg-black sm:bottom-4 sm:right-4 sm:px-5 sm:py-4 sm:tracking-[0.2em]'
+        className={`${open ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'} ${variant === 'global'
+          ? 'fixed bottom-3 right-3 z-40 rounded-full border border-black/10 bg-slate-950 px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-white shadow-[0_15px_40px_rgba(15,23,42,0.22)] transition-all duration-200 hover:bg-black sm:bottom-4 sm:right-4 sm:px-5 sm:py-4 sm:tracking-[0.2em]'
           : variant === 'post'
-            ? 'rounded-full border border-black/10 bg-slate-100 px-5 py-3 text-sm uppercase tracking-[0.2em] text-black transition hover:bg-slate-200'
-          : 'rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs uppercase tracking-[0.2em] text-white transition hover:bg-white/20'}
+            ? 'rounded-full border border-black/10 bg-slate-100 px-5 py-3 text-sm uppercase tracking-[0.2em] text-black transition-all duration-200 hover:bg-slate-200'
+          : 'rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs uppercase tracking-[0.2em] text-white transition-all duration-200 hover:bg-white/20'}`}
       >
         {label || (variant === 'global' ? 'chats' : 'join chat')}
         {totalUnreadCount > 0 && (
@@ -514,9 +555,7 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
         )}
       </button>
 
-      <aside
-        className={`fixed inset-x-3 bottom-3 z-50 flex h-[min(36rem,calc(100dvh-1.5rem))] w-auto origin-bottom-right flex-col overflow-hidden rounded-[1.25rem] border border-black/10 bg-slate-950 text-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] transition duration-200 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:h-[min(38rem,calc(100dvh-3rem))] sm:w-[min(24rem,calc(100vw-3rem))] sm:rounded-[1.5rem] ${open ? 'translate-y-0 scale-100 opacity-100' : 'pointer-events-none translate-y-4 scale-95 opacity-0'}`}
-      >
+      <ChatDrawerShell open={open}>
         {activeTab === 'current' ? (
           chatPanel(false)
         ) : (
@@ -573,7 +612,17 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
             </div>
           </>
         )}
-      </aside>
+      </ChatDrawerShell>
     </>
+  )
+}
+
+function ChatDrawerShell({ children, open }: { children: ReactNode; open: boolean }) {
+  return (
+    <aside
+      className={`fixed inset-x-3 bottom-3 z-50 flex h-[min(36rem,calc(100dvh-1.5rem))] w-auto origin-bottom-right flex-col overflow-hidden rounded-[1.25rem] border border-black/10 bg-slate-950 text-white shadow-[0_25px_80px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out sm:inset-x-auto sm:bottom-6 sm:right-6 sm:h-[min(38rem,calc(100dvh-3rem))] sm:w-[min(24rem,calc(100vw-3rem))] sm:rounded-[1.5rem] ${open ? 'translate-y-0 scale-100 opacity-100' : 'pointer-events-none translate-y-6 scale-90 opacity-0'}`}
+    >
+      {children}
+    </aside>
   )
 }

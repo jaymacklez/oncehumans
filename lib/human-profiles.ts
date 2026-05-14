@@ -15,7 +15,14 @@ export const humanProfileDirectoryChangedEvent = 'once-humans-human-profile-dire
 
 export function normalizeHumanCategory(value: string) {
   if (!value || value === 'human' || value === 'Human') return 'Creators'
-  return value
+  const categoryMap: Record<string, string> = {
+    Engineers: 'Builders',
+    Scientists: 'Thinkers',
+    Writers: 'Thinkers',
+    Teachers: 'Leaders',
+  }
+
+  return categoryMap[value] || value
 }
 
 export function getHumanCategoryOptions() {
@@ -35,9 +42,13 @@ export function getHumanTypeLabel(type: string) {
   const labels: Record<string, string> = {
     Creators: 'Creator',
     Artists: 'Artist',
-    Engineers: 'Engineer',
-    Scientists: 'Scientist',
-    Writers: 'Writer',
+    Builders: 'Builder',
+    Leaders: 'Leader',
+    Teachers: 'Leader',
+    Thinkers: 'Thinker',
+    Engineers: 'Builder',
+    Scientists: 'Thinker',
+    Writers: 'Thinker',
     Performers: 'Performer',
   }
 
@@ -61,6 +72,12 @@ export function getHumanSubcategoryLabel(subcategory: string) {
     Illustrators: 'Illustrator',
     Machines: 'Machine Builder',
     Structures: 'Structure Builder',
+    Teachers: 'Teacher',
+    Coaches: 'Coach',
+    Pastors: 'Pastor',
+    Presidents: 'President',
+    Mentors: 'Mentor',
+    Organizers: 'Organizer',
     Playwrights: 'Playwright',
     Novelists: 'Novelist',
     Poets: 'Poet',
@@ -91,7 +108,16 @@ export function readHumanProfileDirectory() {
 }
 
 export function getStoredHumanProfile(username: string) {
-  return readHumanProfileDirectory().find((profile) => profile.username === username)
+  const profile = readHumanProfileDirectory().find((storedProfile) => storedProfile.username === username)
+  if (!profile) return undefined
+
+  const category = normalizeHumanCategory(profile.category || profile.type)
+  return {
+    ...profile,
+    category,
+    type: category,
+    subcategory: profile.subcategory || getDefaultHumanSubcategory(category),
+  }
 }
 
 export function isHumanUsernameAvailable(username: string) {
@@ -102,8 +128,9 @@ export function isHumanUsernameAvailable(username: string) {
 }
 
 export function getHumanProfilesForSubcategory(category: string, subcategory: string) {
+  const normalizedCategory = normalizeHumanCategory(category)
   return readHumanProfileDirectory().filter((profile) => (
-    profile.category === category &&
+    normalizeHumanCategory(profile.category || profile.type) === normalizedCategory &&
     profile.subcategory === subcategory
   ))
 }
@@ -113,10 +140,11 @@ export function upsertHumanProfile(profile: Omit<HumanProfileListing, 'updatedAt
 
   const normalizedCategory = normalizeHumanCategory(profile.category)
   const normalizedSubcategory = profile.subcategory || getDefaultHumanSubcategory(normalizedCategory)
-  const profilePath = profile.profilePath || `/humans/user/${profile.username}?type=${encodeURIComponent(profile.type)}`
+  const profilePath = profile.profilePath || `/humans/user/${profile.username}?type=${encodeURIComponent(normalizedCategory)}`
   const nextProfile: HumanProfileListing = {
     ...profile,
     category: normalizedCategory,
+    type: normalizedCategory,
     subcategory: normalizedSubcategory,
     profilePath,
     updatedAt: new Date().toISOString(),
@@ -127,7 +155,7 @@ export function upsertHumanProfile(profile: Omit<HumanProfileListing, 'updatedAt
   ]
 
   localStorage.setItem(humanProfileDirectoryStorageKey, JSON.stringify(nextDirectory))
-  localStorage.setItem(`once-humans-profile-type:${profile.username}`, profile.type)
+  localStorage.setItem(`once-humans-profile-type:${profile.username}`, normalizedCategory)
   if (profile.displayName) {
     localStorage.setItem(`once-humans-profile-name:${profile.username}`, profile.displayName)
   }

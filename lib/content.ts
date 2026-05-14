@@ -155,7 +155,7 @@ export const categories: Record<SectionType, Category[]> = {
       ],
     },
     {
-      title: 'Engineers',
+      title: 'Builders',
       description: 'Builders of machines, systems, and practical progress.',
       accent: 'from-slate-200 via-slate-300 to-slate-400',
       subcategories: [
@@ -169,7 +169,7 @@ export const categories: Record<SectionType, Category[]> = {
       ],
     },
     {
-      title: 'Scientists',
+      title: 'Thinkers',
       description: 'Thinkers who turned curiosity into knowledge.',
       accent: 'from-cyan-200 via-sky-200 to-blue-200',
       subcategories: [
@@ -180,20 +180,26 @@ export const categories: Record<SectionType, Category[]> = {
         { title: 'Medicine', description: 'People who changed health and healing.' },
         { title: 'Mathematics', description: 'People who worked with proof, pattern, and number.' },
         { title: 'Earth Science', description: 'People who studied the planet and its systems.' },
+        { title: 'Playwrights', description: 'Thinkers who wrote for performance.' },
+        { title: 'Novelists', description: 'Thinkers of long fiction.' },
+        { title: 'Poets', description: 'Thinkers of concentrated language.' },
+        { title: 'Essayists', description: 'Thinkers who shaped public prose.' },
+        { title: 'Journalists', description: 'Thinkers who reported and interpreted events.' },
+        { title: 'Philosophers', description: 'Thinkers who asked how life and knowledge work.' },
+        { title: 'Historians', description: 'Thinkers who preserved and interpreted the past.' },
       ],
     },
     {
-      title: 'Writers',
-      description: 'Authors of poems, essays, and stories of humanity.',
+      title: 'Leaders',
+      description: 'People who guide, teach, organize, serve, and help others move together.',
       accent: 'from-lime-200 via-emerald-200 to-teal-200',
       subcategories: [
-        { title: 'Playwrights', description: 'Writers for performance.' },
-        { title: 'Novelists', description: 'Writers of long fiction.' },
-        { title: 'Poets', description: 'Writers of concentrated language.' },
-        { title: 'Essayists', description: 'Writers who shaped thought in public prose.' },
-        { title: 'Journalists', description: 'Writers who reported and interpreted events.' },
-        { title: 'Philosophers', description: 'Writers who asked how life and knowledge work.' },
-        { title: 'Historians', description: 'Writers who preserved and interpreted the past.' },
+        { title: 'Teachers', description: 'People who teach, mentor, and help others learn.' },
+        { title: 'Coaches', description: 'People who guide practice, growth, teams, and discipline.' },
+        { title: 'Pastors', description: 'People who lead spiritual communities and care.' },
+        { title: 'Presidents', description: 'People who lead governments, institutions, or public movements.' },
+        { title: 'Mentors', description: 'People who shape others through advice, example, and attention.' },
+        { title: 'Organizers', description: 'People who gather communities around shared work or change.' },
       ],
     },
     {
@@ -818,16 +824,32 @@ const expansionPages = expansionSpecs.map(makeExpansionPage)
 
 function applyContentCorrections(page: ContentPage): ContentPage {
   if (page.id === 'humans-charles-darwin') {
-    return {
+    return normalizeHumanTaxonomy({
       ...page,
-      category: 'Scientists',
+      category: 'Thinkers',
       subcategory: 'Biology',
       relatedIds: ['once-evolution', 'once-dna-double-helix', 'once-germ-theory', 'humans-rachel-carson', 'humans-rosalind-franklin'],
       searchTerms: ['evolution', 'biology', 'species', 'natural selection', 'darwin'],
-    }
+    })
   }
 
-  return page
+  return normalizeHumanTaxonomy(page)
+}
+
+function normalizeHumanTaxonomy(page: ContentPage): ContentPage {
+  if (page.section !== 'humans') return page
+
+    const categoryMap: Record<string, string> = {
+      Engineers: 'Builders',
+      Scientists: 'Thinkers',
+      Writers: 'Thinkers',
+      Teachers: 'Leaders',
+    }
+
+  return {
+    ...page,
+    category: categoryMap[page.category] || page.category,
+  }
 }
 
 function fillRelatedIds(pages: ContentPage[]) {

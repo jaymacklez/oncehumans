@@ -519,7 +519,7 @@ export default function Home() {
                       onClick={() => {
                         setOpenSubcategory((current) => current === subcategory.title ? '' : subcategory.title)
                         setSelectedPageId('')
-                        setSelectedPagePlacement('rail')
+                        setSelectedPagePlacement('content')
                       }}
                       className={`w-full rounded-[0.85rem] border px-3 py-2.5 text-left transition hover:-translate-y-0.5 ${openSubcategory === subcategory.title ? 'border-black bg-black text-white' : 'border-black/10 bg-slate-50 text-black'}`}
                     >
@@ -537,7 +537,7 @@ export default function Home() {
                           type="button"
                           onClick={() => {
                             setSelectedPageId(page.id)
-                            setSelectedPagePlacement('rail')
+                            setSelectedPagePlacement('content')
                           }}
                           className="w-24 shrink-0 overflow-hidden rounded-[0.7rem] bg-slate-950 text-left text-white shadow-[0_8px_18px_rgba(15,23,42,0.14)]"
                         >
@@ -666,7 +666,7 @@ export default function Home() {
             </div>
 
             {!openCategory ? (
-              <div className={`grid gap-6 lg:grid-cols-3 ${openSection === 'once' ? 'mr-auto w-full max-w-5xl justify-items-start' : 'ml-auto w-full max-w-5xl justify-items-end'}`}>
+              <div className={`grid w-full grid-cols-3 gap-2 sm:gap-6 ${openSection === 'once' ? 'mr-auto max-w-5xl justify-items-start' : 'ml-auto max-w-5xl justify-items-end'}`}>
                 {activeCategories.map((category) => (
                   <button
                     key={category.title}
@@ -675,23 +675,23 @@ export default function Home() {
                     }}
                     type="button"
                     onClick={() => chooseCategory(category)}
-                  className="group block w-full overflow-hidden rounded-[1.5rem] border border-black/10 bg-slate-950 text-left shadow-[0_25px_60px_rgba(15,23,42,0.18)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(15,23,42,0.22)] sm:min-w-[18rem] sm:rounded-[2rem]"
+                  className="group block w-full overflow-hidden rounded-[1rem] border border-black/10 bg-slate-950 text-left shadow-[0_25px_60px_rgba(15,23,42,0.18)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_30px_70px_rgba(15,23,42,0.22)] sm:min-w-[18rem] sm:rounded-[2rem]"
                 >
-                    <div className={`h-36 rounded-t-[1.5rem] bg-gradient-to-br ${category.accent} bg-cover bg-center sm:h-48 sm:rounded-t-[2rem]`} />
-                    <div className="bg-slate-950 p-5 sm:p-6">
-                      <h3 className="break-words text-xl font-black uppercase tracking-[0.12em] text-white sm:text-2xl sm:tracking-[0.2em]">{category.title}</h3>
+                    <div className={`h-16 rounded-t-[1rem] bg-gradient-to-br ${category.accent} bg-cover bg-center sm:h-48 sm:rounded-t-[2rem]`} />
+                    <div className="bg-slate-950 p-2 sm:p-6">
+                      <h3 className="truncate text-center text-[0.55rem] font-black uppercase tracking-[0.04em] text-white sm:text-left sm:text-2xl sm:tracking-[0.2em]">{category.title}</h3>
                     </div>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className={`grid w-full gap-8 ${openSection === 'humans' ? 'lg:grid-cols-[minmax(0,1fr)_20rem]' : 'lg:grid-cols-[20rem_minmax(0,1fr)]'}`}>
-                <aside className={`min-w-0 ${openSection === 'humans' ? 'lg:order-2' : ''}`}>
+              <div className={`grid w-full gap-3 sm:gap-8 ${openSection === 'humans' ? 'grid-cols-[minmax(0,1fr)_8.5rem] lg:grid-cols-[minmax(0,1fr)_20rem]' : 'grid-cols-[8.5rem_minmax(0,1fr)] lg:grid-cols-[20rem_minmax(0,1fr)]'}`}>
+                <aside className={`min-w-0 ${openSection === 'humans' ? 'order-2' : ''}`}>
                   {browseRail}
                 </aside>
 
                 <div
-                  className={`min-w-0 transition-[margin] duration-300 ${openSection === 'humans' ? 'lg:order-1' : ''} ${selectedPage && selectedPagePlacement === 'content' ? 'block' : 'hidden'} lg:block ${selectedPage && selectedPagePlacement === 'rail' ? 'lg:block' : ''}`}
+                  className={`min-w-0 transition-[margin] duration-300 ${openSection === 'humans' ? 'order-1' : ''} ${(selectedPage || selectedSubcategory || selectedCategory) && selectedPagePlacement === 'content' ? 'block' : 'hidden'} lg:block ${selectedPage && selectedPagePlacement === 'rail' ? 'lg:block' : ''}`}
                   style={{ marginTop: selectedPage || selectedSubcategory ? 0 : selectedCategoryOffset }}
                 >
                   {browseContent}

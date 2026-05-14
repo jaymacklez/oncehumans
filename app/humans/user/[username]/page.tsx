@@ -94,11 +94,11 @@ export default function HumanUserPage() {
   })
   const [humanCategory, setHumanCategory] = useState(() => {
     if (typeof window === 'undefined') return normalizeHumanCategory(typeFromUrl)
-    return getStoredHumanProfile(username)?.category || normalizeHumanCategory(localStorage.getItem(`once-humans-profile-category:${username}`) || typeFromUrl)
+    return normalizeHumanCategory(getStoredHumanProfile(username)?.category || localStorage.getItem(`once-humans-profile-category:${username}`) || typeFromUrl)
   })
   const [humanSubcategory, setHumanSubcategory] = useState(() => {
     if (typeof window === 'undefined') return 'People'
-    const category = getStoredHumanProfile(username)?.category || normalizeHumanCategory(localStorage.getItem(`once-humans-profile-category:${username}`) || typeFromUrl)
+    const category = normalizeHumanCategory(getStoredHumanProfile(username)?.category || localStorage.getItem(`once-humans-profile-category:${username}`) || typeFromUrl)
     return getStoredHumanProfile(username)?.subcategory || localStorage.getItem(`once-humans-profile-subcategory:${username}`) || getDefaultHumanSubcategory(category)
   })
   const descriptionStorageKey = `once-humans-profile-description:${username}`

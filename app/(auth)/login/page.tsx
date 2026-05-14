@@ -26,7 +26,7 @@ export default function Login() {
     const username = slugifyName(usernameSource || email.split('@')[0] || 'human')
     const savedProfile = getStoredHumanProfile(username)
     const savedType = savedProfile?.type || localStorage.getItem(`once-humans-profile-type:${username}`) || type
-    const category = savedProfile?.category || normalizeHumanCategory(localStorage.getItem(`once-humans-profile-category:${username}`) || savedType)
+    const category = normalizeHumanCategory(savedProfile?.category || localStorage.getItem(`once-humans-profile-category:${username}`) || savedType)
     const subcategory = savedProfile?.subcategory || localStorage.getItem(`once-humans-profile-subcategory:${username}`) || getDefaultHumanSubcategory(category)
     const profilePath = `/humans/user/${username}?type=${encodeURIComponent(category)}`
     upsertHumanProfile({
