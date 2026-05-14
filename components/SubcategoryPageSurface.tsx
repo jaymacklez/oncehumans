@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import ContentPageSurface from '@/components/ContentPageSurface'
 import LiveChatDrawer from '@/components/LiveChatDrawer'
@@ -13,6 +13,7 @@ type SubcategoryPageSurfaceProps = {
   subcategory: Subcategory
   onBack?: () => void
   backHref?: string
+  onEntryOpenChange?: (open: boolean) => void
 }
 
 function subscribeToHumanProfiles(onStoreChange: () => void) {
@@ -30,7 +31,7 @@ function getHumanProfilesSnapshot() {
   return localStorage.getItem(humanProfileDirectoryStorageKey) || '[]'
 }
 
-export default function SubcategoryPageSurface({ section, category, subcategory, onBack, backHref }: SubcategoryPageSurfaceProps) {
+export default function SubcategoryPageSurface({ section, category, subcategory, onBack, backHref, onEntryOpenChange }: SubcategoryPageSurfaceProps) {
   const pages = useMemo(
     () => getPagesForSubcategory(section, category.title, subcategory.title),
     [category.title, section, subcategory.title],
@@ -50,6 +51,14 @@ export default function SubcategoryPageSurface({ section, category, subcategory,
       return []
     }
   }, [category.title, humanProfilesSnapshot, section, subcategory.title])
+
+  useEffect(() => {
+    onEntryOpenChange?.(Boolean(selectedPage))
+
+    return () => {
+      onEntryOpenChange?.(false)
+    }
+  }, [onEntryOpenChange, selectedPage])
 
   if (selectedPage) {
     return (

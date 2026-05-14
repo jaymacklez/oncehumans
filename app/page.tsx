@@ -60,6 +60,7 @@ function getHumanProfilesSnapshot() {
 function getCompactTitleClass(title: string, baseSize = 'text-sm') {
   if (title.length > 18) return 'text-[0.68rem] sm:text-xs'
   if (title.length > 13) return 'text-xs sm:text-sm'
+  if (title.length > 10) return 'text-[0.58rem] sm:text-base'
   return baseSize
 }
 
@@ -233,6 +234,7 @@ export default function Home() {
   const [openSubcategory, setOpenSubcategory] = useState('')
   const [selectedPageId, setSelectedPageId] = useState('')
   const [selectedPagePlacement, setSelectedPagePlacement] = useState<'rail' | 'content'>('content')
+  const [subcategoryEntryOpen, setSubcategoryEntryOpen] = useState(false)
   const [useDesktopCategoryOrder, setUseDesktopCategoryOrder] = useState(false)
   const [promotedCategory, setPromotedCategory] = useState('')
   const [selectedCategoryOffset, setSelectedCategoryOffset] = useState(0)
@@ -268,6 +270,7 @@ export default function Home() {
             setOpenCategory(category.title)
             setOpenSubcategory('')
             setSelectedPageId('')
+            setSubcategoryEntryOpen(false)
             setSelectedPagePlacement('content')
           }
         }
@@ -279,6 +282,7 @@ export default function Home() {
       setOpenCategory(page.category)
       setOpenSubcategory(page.subcategory)
       setSelectedPageId(page.id)
+      setSubcategoryEntryOpen(false)
       setSelectedPagePlacement('content')
     }, 0)
 
@@ -312,7 +316,7 @@ export default function Home() {
   useEffect(() => {
     let frame = 0
 
-    if (!useDesktopCategoryOrder || !openCategory) {
+    if (!openCategory) {
       frame = window.requestAnimationFrame(() => setSelectedCategoryOffset(0))
       return () => window.cancelAnimationFrame(frame)
     }
@@ -379,6 +383,7 @@ export default function Home() {
     setOpenSubcategory('')
     setPromotedCategory('')
     setSelectedPageId('')
+    setSubcategoryEntryOpen(false)
     setSelectedPagePlacement('content')
   }
 
@@ -405,6 +410,7 @@ export default function Home() {
     })
     setOpenSubcategory('')
     setSelectedPageId('')
+    setSubcategoryEntryOpen(false)
     setSelectedPagePlacement('content')
   }
 
@@ -413,17 +419,20 @@ export default function Home() {
     setOpenCategory(page.category)
     setOpenSubcategory(page.subcategory)
     setSelectedPageId(page.id)
+    setSubcategoryEntryOpen(false)
     setSelectedPagePlacement('content')
   }
 
   const clearSelectedPage = () => {
     setSelectedPageId('')
+    setSubcategoryEntryOpen(false)
     setSelectedPagePlacement('content')
   }
 
   const openDesktopSubcategory = (subcategory: Subcategory) => {
     setOpenSubcategory(subcategory.title)
     setSelectedPageId('')
+    setSubcategoryEntryOpen(false)
     setSelectedPagePlacement('content')
   }
 
@@ -449,7 +458,8 @@ export default function Home() {
   const selectedCategory = activeCategories.find((category) => category.title === openCategory)
   const orderedSubcategories = selectedCategory ? getOrderedSubcategories(selectedCategory) : []
   const selectedSubcategory = selectedCategory?.subcategories.find((subcategory) => subcategory.title === openSubcategory)
-  const orderedCategories = promotedCategory && useDesktopCategoryOrder
+  const mobileEntryFocus = Boolean(selectedPage || subcategoryEntryOpen)
+  const orderedCategories = promotedCategory
     ? [
         ...activeCategories.filter((category) => category.title === promotedCategory),
         ...activeCategories.filter((category) => category.title !== promotedCategory),
@@ -474,7 +484,7 @@ export default function Home() {
               >
                 <div className={`h-16 rounded-t-[1rem] bg-gradient-to-br ${category.accent} bg-cover bg-center sm:h-28 sm:rounded-t-[1.6rem]`} />
               <div className="bg-slate-950 p-2 sm:p-5">
-                  <h3 className={`${getCompactTitleClass(category.title, 'text-[0.68rem] sm:text-xl')} truncate whitespace-nowrap text-center font-black uppercase tracking-[0.05em] text-white sm:text-left sm:tracking-[0.18em]`}>{category.title}</h3>
+                  <h3 className={`${getCompactTitleClass(category.title, 'text-[0.68rem] sm:text-xl')} truncate whitespace-nowrap text-center font-black uppercase tracking-[0.02em] text-white sm:text-left sm:tracking-[0.18em]`}>{category.title}</h3>
                 </div>
               </button>
 
@@ -514,8 +524,10 @@ export default function Home() {
         onBack={() => {
           setOpenSubcategory('')
           setSelectedPageId('')
+          setSubcategoryEntryOpen(false)
           setSelectedPagePlacement('content')
         }}
+        onEntryOpenChange={setSubcategoryEntryOpen}
       />
     </div>
   ) : selectedCategory ? (
@@ -594,14 +606,14 @@ export default function Home() {
                 >
                     <div className={`h-16 rounded-t-[1rem] bg-gradient-to-br ${category.accent} bg-cover bg-center sm:h-48 sm:rounded-t-[2rem]`} />
                     <div className="bg-slate-950 p-2 sm:p-6">
-                      <h3 className="truncate text-center text-[0.55rem] font-black uppercase tracking-[0.04em] text-white sm:text-left sm:text-2xl sm:tracking-[0.2em]">{category.title}</h3>
+                      <h3 className={`${getCompactTitleClass(category.title, 'text-[0.55rem] sm:text-2xl')} truncate whitespace-nowrap text-center font-black uppercase tracking-[0.02em] text-white sm:text-left sm:tracking-[0.2em]`}>{category.title}</h3>
                     </div>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className={`grid w-full gap-2 sm:gap-8 ${openSection === 'humans' ? 'grid-cols-[minmax(0,1fr)_6.75rem] sm:grid-cols-[minmax(0,1fr)_8.5rem] lg:grid-cols-[minmax(0,1fr)_20rem]' : 'grid-cols-[6.75rem_minmax(0,1fr)] sm:grid-cols-[8.5rem_minmax(0,1fr)] lg:grid-cols-[20rem_minmax(0,1fr)]'}`}>
-                <aside className={`min-w-0 ${openSection === 'humans' ? 'order-2' : ''}`}>
+              <div className={`grid w-full gap-2 sm:gap-8 ${mobileEntryFocus ? 'grid-cols-1' : openSection === 'humans' ? 'grid-cols-[minmax(0,1fr)_7.75rem]' : 'grid-cols-[7.75rem_minmax(0,1fr)]'} ${openSection === 'humans' ? 'sm:grid-cols-[minmax(0,1fr)_8.5rem] lg:grid-cols-[minmax(0,1fr)_20rem]' : 'sm:grid-cols-[8.5rem_minmax(0,1fr)] lg:grid-cols-[20rem_minmax(0,1fr)]'}`}>
+                <aside className={`min-w-0 ${mobileEntryFocus ? 'hidden sm:block' : ''} ${openSection === 'humans' ? 'order-2' : ''}`}>
                   {browseRail}
                 </aside>
 

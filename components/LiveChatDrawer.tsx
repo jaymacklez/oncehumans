@@ -589,12 +589,12 @@ export default function LiveChatDrawer({ room, variant = 'inline', label }: Live
           openDrawerForRoom(currentRoom, variant === 'global' ? 'saved' : 'current')
         }}
         className={`${open ? 'pointer-events-none scale-90 opacity-0' : 'scale-100 opacity-100'} ${variant === 'global'
-          ? 'fixed bottom-3 right-3 z-40 rounded-full border border-black/10 bg-slate-950 px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-white shadow-[0_15px_40px_rgba(15,23,42,0.22)] transition-all duration-200 hover:bg-black sm:bottom-4 sm:right-4 sm:px-5 sm:py-4 sm:tracking-[0.2em]'
+          ? 'fixed bottom-3 right-3 z-40 inline-flex items-center justify-center rounded-full border border-black/10 bg-slate-950 px-4 py-3 text-xs font-black uppercase tracking-[0.16em] text-white shadow-[0_15px_40px_rgba(15,23,42,0.22)] transition-all duration-200 hover:bg-black sm:bottom-4 sm:right-4 sm:px-5 sm:py-4 sm:tracking-[0.2em]'
           : variant === 'post'
-            ? 'rounded-full border border-black/10 bg-slate-100 px-5 py-3 text-sm uppercase tracking-[0.2em] text-black transition-all duration-200 hover:bg-slate-200'
-          : 'rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs uppercase tracking-[0.2em] text-white transition-all duration-200 hover:bg-white/20'}`}
+            ? 'inline-flex items-center justify-center rounded-full border border-black/10 bg-slate-100 px-5 py-3 text-sm uppercase tracking-[0.2em] text-black transition-all duration-200 hover:bg-slate-200'
+          : 'inline-flex w-full items-center justify-center overflow-hidden rounded-full border border-white/20 bg-white/10 px-2 py-2.5 text-[0.6rem] uppercase tracking-[0.05em] text-white transition-all duration-200 hover:bg-white/20 sm:w-auto sm:px-4 sm:py-3 sm:text-xs sm:tracking-[0.2em]'}`}
       >
-        {label || (variant === 'global' ? 'chats' : 'join chat')}
+        <span className="block truncate whitespace-nowrap">{label || (variant === 'global' ? 'chats' : 'join chat')}</span>
         {totalUnreadCount > 0 && (
           <span className="ml-3 rounded-full bg-white px-2 py-1 text-xs text-slate-950">{totalUnreadCount}</span>
         )}
