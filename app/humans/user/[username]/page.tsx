@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import GalleryMediaSection from '@/components/GalleryMediaSection'
 import LiveChatDrawer from '@/components/LiveChatDrawer'
 import {
@@ -11,6 +11,7 @@ import {
   getHumanSubcategoryOptions,
   getHumanTypeLabel,
   getStoredHumanProfile,
+  isHumanUsernameAvailable,
   normalizeHumanCategory,
   upsertHumanProfile,
 } from '@/lib/human-profiles'
@@ -58,6 +59,18 @@ function readLocalStorage<T>(key: string, fallback: T): T {
   }
 }
 
+function normalizeUsername(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-|-$/g, '') || 'human'
+}
+
+function moveLocalStorageValue(fromKey: string, toKey: string) {
+  const value = localStorage.getItem(fromKey)
+  if (value === null) return
+
+  localStorage.setItem(toKey, value)
+  localStorage.removeItem(fromKey)
+}
+
 function formatPostDate(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -83,6 +96,7 @@ function formatPostDate(value: string) {
 
 export default function HumanUserPage() {
   const params = useParams()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const usernameParam = params?.username
   const username = Array.isArray(usernameParam) ? usernameParam[0] : usernameParam || 'human'
@@ -109,9 +123,12 @@ export default function HumanUserPage() {
   const [description, setDescription] = useState(() => (
     typeof window === 'undefined' ? defaultDescription : localStorage.getItem(descriptionStorageKey) || defaultDescription
   ))
-  const [displayName] = useState(() => (
+  const [displayName, setDisplayName] = useState(() => (
     typeof window === 'undefined' ? username : getStoredHumanProfile(username)?.displayName || localStorage.getItem(displayNameStorageKey) || username
   ))
+  const [draftDisplayName, setDraftDisplayName] = useState(displayName)
+  const [draftUsername, setDraftUsername] = useState(username)
+  const [profileMessage, setProfileMessage] = useState('')
   const [editingDescription, setEditingDescription] = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
   const [profileImage, setProfileImage] = useState<ProfileCrop | null>(() => readLocalStorage<ProfileCrop | null>(profileImageStorageKey, null))
@@ -171,6 +188,58 @@ export default function HumanUserPage() {
     setHumanCategory(normalizedCategory)
     setHumanType(normalizedCategory)
     setHumanSubcategory(getDefaultHumanSubcategory(normalizedCategory))
+  }
+
+  const openProfileEditor = () => {
+    setDraftDisplayName(displayName)
+    setDraftUsername(username)
+    setProfileMessage('')
+    setEditingProfile(true)
+  }
+
+  const saveProfileEdits = () => {
+    const nextUsername = normalizeUsername(draftUsername)
+    const nextDisplayName = draftDisplayName.trim() || nextUsername
+    const usernameChanged = nextUsername !== username
+
+    if (usernameChanged && !isHumanUsernameAvailable(nextUsername)) {
+      setProfileMessage('That username is already taken. Try another @ name.')
+      return
+    }
+
+    const category = normalizeHumanCategory(humanCategory || humanType)
+    const subcategory = humanSubcategory || getDefaultHumanSubcategory(category)
+    const profilePath = `/humans/user/${nextUsername}?type=${encodeURIComponent(category)}`
+
+    if (usernameChanged) {
+      moveLocalStorageValue(`once-humans-profile-description:${username}`, `once-humans-profile-description:${nextUsername}`)
+      moveLocalStorageValue(`once-humans-profile-image:${username}`, `once-humans-profile-image:${nextUsername}`)
+      moveLocalStorageValue(`once-humans-profile-posts:${username}`, `once-humans-profile-posts:${nextUsername}`)
+      moveLocalStorageValue(`once-humans-gallery:profile:${username}`, `once-humans-gallery:profile:${nextUsername}`)
+      localStorage.removeItem(`once-humans-profile-name:${username}`)
+      localStorage.removeItem(`once-humans-profile-type:${username}`)
+      localStorage.removeItem(`once-humans-profile-category:${username}`)
+      localStorage.removeItem(`once-humans-profile-subcategory:${username}`)
+    }
+
+    if (!usernameChanged) {
+      setDisplayName(nextDisplayName)
+    }
+    localStorage.setItem(`once-humans-profile-name:${nextUsername}`, nextDisplayName)
+    upsertHumanProfile({
+      username: nextUsername,
+      previousUsername: usernameChanged ? username : undefined,
+      displayName: nextDisplayName,
+      category,
+      subcategory,
+      type: category,
+      profilePath,
+    })
+    setEditingProfile(false)
+
+    if (usernameChanged) {
+      router.replace(profilePath)
+    }
   }
 
   const handleProfileImage = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -267,11 +336,11 @@ export default function HumanUserPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4ead4] px-6 py-10 text-black">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <section className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
-          <div className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
-            <div className="rounded-[2rem] border border-black/10 bg-slate-950 p-6 text-white">
+    <div className="min-h-screen overflow-x-hidden bg-[#f4ead4] px-3 py-6 text-black sm:px-6 sm:py-10">
+      <div className="mx-auto w-full max-w-6xl space-y-5 sm:space-y-8">
+        <section className="w-full max-w-full overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/95 p-3 shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:rounded-[2rem] sm:p-8">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
+            <div className="min-w-0 rounded-[1.25rem] border border-black/10 bg-slate-950 p-4 text-white sm:rounded-[2rem] sm:p-6">
               <div className="flex flex-col items-center gap-5">
                 <label
                   className="relative flex h-24 w-24 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white text-4xl font-black uppercase tracking-[0.25em] text-slate-950 transition hover:opacity-90"
@@ -289,21 +358,21 @@ export default function HumanUserPage() {
                   )}
                   <input type="file" accept="image/*" onChange={handleProfileImage} className="hidden" />
                 </label>
-                <div className="space-y-1 text-center">
-                  <p className="text-sm uppercase tracking-[0.35em] text-white/75">{displayType}</p>
-                  <p className="text-[0.65rem] uppercase tracking-[0.2em] text-white/45">{getHumanSubcategoryLabel(humanSubcategory)}</p>
-                  <p className="text-xs text-white/60">{displayName}</p>
-                  <p className="text-xs text-white/45">@{username}</p>
+                <div className="min-w-0 max-w-full space-y-1 text-center">
+                  <p className="truncate text-xs uppercase tracking-[0.18em] text-white/75 sm:text-sm sm:tracking-[0.35em]">{displayType}</p>
+                  <p className="truncate text-[0.62rem] uppercase tracking-[0.12em] text-white/45 sm:tracking-[0.2em]">{getHumanSubcategoryLabel(humanSubcategory)}</p>
+                  <p className="truncate text-xs text-white/60">{displayName}</p>
+                  <p className="truncate text-xs text-white/45">@{username}</p>
                   <button
                     type="button"
-                    onClick={() => setEditingProfile(true)}
+                    onClick={openProfileEditor}
                     className="mt-2 rounded-full border border-white/15 px-3 py-1.5 text-[0.65rem] uppercase tracking-[0.16em] text-white/70 transition hover:bg-white/10"
                   >
                     edit profile
                   </button>
                 </div>
               </div>
-              <div className="mt-10 flex flex-col gap-3 rounded-[1.5rem] bg-white/10 p-4 text-sm text-white/90">
+              <div className="mt-6 flex min-w-0 flex-col gap-3 rounded-[1rem] bg-white/10 p-3 text-sm text-white/90 sm:mt-10 sm:rounded-[1.5rem] sm:p-4">
                 {editingDescription ? (
                   <textarea
                     value={description}
@@ -323,7 +392,7 @@ export default function HumanUserPage() {
               </div>
             </div>
 
-            <div className="relative rounded-[2rem] border border-black/10 bg-slate-950 p-4 text-white sm:p-5">
+            <div className="relative min-w-0 overflow-hidden rounded-[1.25rem] border border-black/10 bg-slate-950 p-3 text-white sm:rounded-[2rem] sm:p-5">
               <LiveChatDrawer
                 key={`profile:${username}`}
                 variant="embedded"
@@ -346,12 +415,12 @@ export default function HumanUserPage() {
           chatEyebrow={`gallery from ${displayType.toLowerCase()} ${username}`}
         />
 
-        <section className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
+        <section className="w-full max-w-full overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/95 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:rounded-[2rem] sm:p-8">
           <h2 className="mb-5 text-sm font-black uppercase tracking-[0.16em] text-black/70">Posts</h2>
           <textarea
             value={postBody}
             onChange={(e) => setPostBody(e.target.value)}
-            className="w-full resize-none rounded-[1.75rem] border border-black/10 bg-slate-50 p-6 text-sm text-black outline-none focus:border-black/20"
+            className="w-full resize-none rounded-[1.25rem] border border-black/10 bg-slate-50 p-4 text-base text-black outline-none focus:border-black/20 sm:rounded-[1.75rem] sm:p-6 sm:text-sm"
             rows={4}
             placeholder="Write a new post..."
           />
@@ -373,12 +442,12 @@ export default function HumanUserPage() {
             </div>
           ) : (
             posts.map((post) => (
-              <article key={post.id} className="rounded-[2rem] border border-black/10 bg-white/95 p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
+              <article key={post.id} className="w-full max-w-full overflow-hidden rounded-[1.25rem] border border-black/10 bg-white/95 p-4 shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:rounded-[2rem] sm:p-8">
                 <div>
                   <p className="text-[0.65rem] uppercase tracking-[0.18em] text-black/45">posted</p>
                   <h3 className="mt-1 text-xs font-black uppercase tracking-[0.12em] text-black/55">{formatPostDate(post.date)}</h3>
                 </div>
-                <p className="mt-5 text-lg leading-8 text-black/85">{post.body}</p>
+                <p className="mt-5 break-words text-base leading-7 text-black/85 sm:text-lg sm:leading-8">{post.body}</p>
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                   <button
                     type="button"
@@ -481,6 +550,30 @@ export default function HumanUserPage() {
                 )}
               </label>
 
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="space-y-2">
+                  <span className="block text-xs font-black uppercase tracking-[0.16em] text-black/50">Name</span>
+                  <input
+                    value={draftDisplayName}
+                    onChange={(event) => setDraftDisplayName(event.target.value)}
+                    className="w-full rounded-2xl border border-black/10 bg-slate-50 px-4 py-3 text-base text-black outline-none focus:border-black/25 sm:text-sm"
+                    placeholder="Your name"
+                  />
+                </label>
+                <label className="space-y-2">
+                  <span className="block text-xs font-black uppercase tracking-[0.16em] text-black/50">Username</span>
+                  <div className="flex rounded-2xl border border-black/10 bg-slate-50 px-4 py-3 text-base text-black focus-within:border-black/25 sm:text-sm">
+                    <span className="text-black/35">@</span>
+                    <input
+                      value={draftUsername}
+                      onChange={(event) => setDraftUsername(event.target.value)}
+                      className="min-w-0 flex-1 bg-transparent pl-1 text-black outline-none"
+                      placeholder="username"
+                    />
+                  </div>
+                </label>
+              </div>
+
               <div className="space-y-4">
                 <p className="whitespace-nowrap text-center text-[0.68rem] uppercase tracking-[0.08em] text-black/50 sm:text-sm sm:tracking-[0.25em]">
                   what type of human are you?
@@ -510,9 +603,15 @@ export default function HumanUserPage() {
                 </select>
               </div>
 
+              {profileMessage && (
+                <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                  {profileMessage}
+                </p>
+              )}
+
               <button
                 type="button"
-                onClick={() => setEditingProfile(false)}
+                onClick={saveProfileEdits}
                 className="w-full rounded-2xl bg-black px-5 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-slate-900"
               >
                 save profile

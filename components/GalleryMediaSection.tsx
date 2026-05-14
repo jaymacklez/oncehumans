@@ -104,18 +104,18 @@ export default function GalleryMediaSection({
   } : undefined
 
   return (
-    <section className={`${compact ? 'rounded-[1.5rem] p-5' : 'rounded-[2rem] p-8 shadow-[0_25px_60px_rgba(15,23,42,0.12)]'} border border-black/10 bg-white/95`}>
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <section className={`${compact ? 'rounded-[1.5rem] p-5' : 'rounded-[1.25rem] p-4 shadow-[0_25px_60px_rgba(15,23,42,0.12)] sm:rounded-[2rem] sm:p-8'} w-full max-w-full overflow-hidden border border-black/10 bg-white/95`}>
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
         <h2 className={`${compact ? 'text-xs tracking-[0.14em]' : 'text-sm tracking-[0.16em]'} font-black uppercase text-black/70`}>
           Gallery
         </h2>
-        <label className="cursor-pointer rounded-full border border-black/10 bg-black px-5 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-slate-900">
+        <label className="cursor-pointer rounded-full border border-black/10 bg-black px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-slate-900 sm:px-5 sm:tracking-[0.2em]">
           Add
           <input type="file" multiple accept="image/*,video/*" onChange={handleUpload} className="hidden" />
         </label>
       </div>
 
-      <div className={`${compact ? 'mt-4' : 'mt-8'} overflow-x-auto pb-2`}>
+      <div className={`${compact ? 'mt-4' : 'mt-6 sm:mt-8'} max-w-full overflow-x-auto pb-2`}>
         {uploads.length === 0 ? (
           <div className={`${compact ? 'rounded-[1.25rem] p-8' : 'rounded-[1.75rem] p-12'} border border-dashed border-black/20 bg-slate-50 text-center text-sm text-black/60`}>
             {emptyMessage}

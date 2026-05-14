@@ -135,7 +135,7 @@ export function getHumanProfilesForSubcategory(category: string, subcategory: st
   ))
 }
 
-export function upsertHumanProfile(profile: Omit<HumanProfileListing, 'updatedAt' | 'profilePath'> & { profilePath?: string }) {
+export function upsertHumanProfile(profile: Omit<HumanProfileListing, 'updatedAt' | 'profilePath'> & { profilePath?: string; previousUsername?: string }) {
   if (typeof window === 'undefined') return
 
   const normalizedCategory = normalizeHumanCategory(profile.category)
@@ -151,7 +151,10 @@ export function upsertHumanProfile(profile: Omit<HumanProfileListing, 'updatedAt
   }
   const nextDirectory = [
     nextProfile,
-    ...readHumanProfileDirectory().filter((existingProfile) => existingProfile.username !== profile.username),
+    ...readHumanProfileDirectory().filter((existingProfile) => (
+      existingProfile.username !== profile.username &&
+      existingProfile.username !== profile.previousUsername
+    )),
   ]
 
   localStorage.setItem(humanProfileDirectoryStorageKey, JSON.stringify(nextDirectory))
